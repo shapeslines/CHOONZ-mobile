@@ -89,3 +89,143 @@ export interface FighterKit {
   notes: string;
   moves: KitMove[];
 }
+
+export interface Toon {
+  id: number;
+  name: string;
+  description: string | null;
+  sprite_url: string | null;
+  tags: string[];
+  attributes: Record<string, unknown>;
+}
+
+export interface ToonCreateInput {
+  name: string;
+  description?: string | null;
+  sprite_url?: string | null;
+  tags?: string[];
+  attributes?: Record<string, unknown>;
+}
+
+export interface Loadout {
+  id: number;
+  toon_id: number;
+  name: string | null;
+  gel: string;
+  fighter_id: string;
+  user_kit_id: number | null;
+  is_default: boolean;
+}
+
+export interface LoadoutCreateInput {
+  toon_id: number;
+  name?: string | null;
+  gel?: string;
+  fighter_id?: string;
+  user_kit_id?: number | null;
+  is_default?: boolean;
+}
+
+export type MatchStatus = 'ready' | 'active' | 'paused' | 'completed' | 'cancelled';
+export type MatchResult = 'p1' | 'p2' | 'draw';
+export type FightAction = 'light' | 'heavy' | 'special' | 'block';
+
+export interface MatchTelemetry {
+  result: MatchResult;
+  result_step: number;
+  result_p1_hp: number;
+  result_p2_hp: number;
+  seed: number;
+  stage_id: string;
+  p1_fighter_id: string;
+  p2_fighter_id: string;
+  input_count: number;
+  series_id: number | null;
+}
+
+export interface Match {
+  id: number;
+  series_id: number | null;
+  p1_toon_id: number;
+  p2_toon_id: number | null;
+  p1_gel: string;
+  p2_gel: string;
+  p1_fighter_id: string;
+  p2_fighter_id: string;
+  stage_id: string;
+  seed: number;
+  status: MatchStatus;
+  result: MatchResult | null;
+  result_step: number | null;
+  result_p1_hp: number | null;
+  result_p2_hp: number | null;
+  last_step: number;
+  loop: number;
+  share_token: string | null;
+  telemetry: MatchTelemetry | null;
+  allowed_transitions: MatchStatus[];
+}
+
+export interface FighterHud {
+  hp: number;
+  meter: number;
+  rounds: number;
+  pose: string | null;
+  frame: number | null;
+  x: number | null;
+  lift: number | null;
+}
+
+export interface MatchState {
+  match_id: number;
+  status: MatchStatus;
+  step: number;
+  last_step: number;
+  bar: number;
+  ceremony: 'round_call' | 'fight_call' | 'in_fight';
+  p1: FighterHud;
+  p2: FighterHud;
+  timer: number;
+  combo: number;
+  p1_gel: string;
+  p2_gel: string;
+  p1_fighter_id: string;
+  p2_fighter_id: string;
+  stage_id: string;
+  seed: number;
+  loop: number;
+  leading: MatchResult | null;
+  ann: string | null;
+  sound_hooks: string[];
+  extra: Record<string, unknown>;
+}
+
+export interface MatchCreateInput {
+  p1_toon_id?: number | null;
+  p2_toon_id?: number | null;
+  p1_loadout_id?: number | null;
+  p2_loadout_id?: number | null;
+  use_default_loadout?: boolean;
+  p1_gel?: string;
+  p2_gel?: string;
+  enforce_one_gel?: boolean;
+  allow_gel_split?: boolean;
+  p1_fighter_id?: string;
+  p2_fighter_id?: string;
+  stage_id?: string;
+  seed?: number;
+}
+
+export interface MatchActInput {
+  action: FightAction;
+  side?: 'p1';
+  advance?: boolean;
+}
+
+export interface MatchTickInput {
+  delta?: number;
+}
+
+export interface MatchCompleteInput {
+  step?: number | null;
+}

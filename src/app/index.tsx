@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { StyleSheet, Text, View } from 'react-native';
+import { Link } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { errorMessage } from '@/lib/errors';
 import { useChoonzApi } from '@/providers/api-provider';
@@ -45,10 +46,15 @@ export default function StatusScreen() {
       </Panel>
 
       <Panel>
-        <PanelTitle>FIRST SLICE</PanelTitle>
+        <PanelTitle>PRACTICE LOOP</PanelTitle>
         <BodyText>
-          Read-only status, profile, and catalog only. Match actions remain deliberately absent.
+          Select a Toon and loadout, then run the review-only P1 practice loop with confirmed CHOONZ snapshots.
         </BodyText>
+        <Link href="/fight" asChild>
+          <Pressable accessibilityLabel="open-fight" accessibilityRole="button" style={styles.fightButton}>
+            <Text style={styles.fightButtonText}>OPEN FIGHT</Text>
+          </Pressable>
+        </Link>
       </Panel>
     </AppScreen>
   );
@@ -98,5 +104,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     lineHeight: 21,
+  },
+  fightButton: {
+    alignItems: 'center',
+    backgroundColor: tokens.accent,
+    borderColor: tokens.black,
+    borderRadius: tokens.radius,
+    borderWidth: tokens.borderWidth,
+    paddingVertical: 12,
+  },
+  fightButtonText: {
+    color: tokens.black,
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
 });

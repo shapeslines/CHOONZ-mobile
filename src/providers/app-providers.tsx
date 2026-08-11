@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { appConfig } from '@/lib/config';
 import { ApiProvider } from '@/providers/api-provider';
 import { AuthProvider } from '@/providers/auth-provider';
+import { FightProvider } from '@/providers/fight-provider';
 import { RuntimeConfigProvider } from '@/providers/runtime-config-provider';
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
@@ -25,7 +26,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <RuntimeConfigProvider config={appConfig}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider config={appConfig}>
-            <ApiProvider>{children}</ApiProvider>
+            <ApiProvider>
+              <FightProvider>{children}</FightProvider>
+            </ApiProvider>
           </AuthProvider>
         </QueryClientProvider>
       </RuntimeConfigProvider>

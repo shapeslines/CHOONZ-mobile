@@ -4,12 +4,20 @@ import type {
   ChoonzUser,
   EngineMeta,
   Fighter,
+  FighterHud,
   FighterKit,
   Gel,
   Health,
   KitMove,
+  Loadout,
+  Match,
+  MatchResult,
+  MatchState,
+  MatchStatus,
+  MatchTelemetry,
   SoundEvent,
   Stage,
+  Toon,
 } from '@/lib/types';
 
 type RecordValue = Record<string, unknown>;
@@ -75,7 +83,57 @@ function numberRecord(value: unknown, label: string): Record<string, number> {
 }
 
 function jsonRecord(value: unknown, label: string): Record<string, unknown> {
-  return record(value, label);
+  const input = record(value, label);
+  for (const [key, item] of Object.entries(input)) {
+    jsonValue(item, `${label}.${key}`);
+  }
+  return input;
+}
+
+function nullableNumber(value: unknown, label: string): number | null {
+  return value === null ? null : number(value, label);
+}
+
+function nullableInteger(value: unknown, label: string): number | null {
+  return value === null ? null : integer(value, label);
+}
+
+function jsonValue(value: unknown, label: string): void {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') {
+    return;
+  }
+  if (typeof value === 'number') {
+    number(value, label);
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => jsonValue(item, `${label}[${index}]`));
+    return;
+  }
+  const input = record(value, label);
+  for (const [key, item] of Object.entries(input)) {
+    jsonValue(item, `${label}.${key}`);
+  }
+}
+
+const matchStatuses = ['ready', 'active', 'paused', 'completed', 'cancelled'] as const;
+const matchResults = ['p1', 'p2', 'draw'] as const;
+const ceremonyStates = ['round_call', 'fight_call', 'in_fight'] as const;
+
+function literal<T extends string>(value: unknown, allowed: readonly T[], label: string): T {
+  const next = string(value, label);
+  if (!allowed.includes(next as T)) {
+    throw new ResponseDecodeError(`${label} must be one of ${allowed.join(', ')}.`);
+  }
+  return next as T;
+}
+
+function matchStatus(value: unknown, label: string): MatchStatus {
+  return literal(value, matchStatuses, label);
+}
+
+function nullableMatchResult(value: unknown, label: string): MatchResult | null {
+  return value === null ? null : literal(value, matchResults, label);
 }
 
 export function decodeHealth(value: unknown): Health {
@@ -225,4 +283,121 @@ export function decodeKit(value: unknown): FighterKit {
 
 export function decodeKits(value: unknown): FighterKit[] {
   return array(value, 'kits').map(decodeKit);
+}
+
+export function decodeToon(value: unknown): Toon {
+  const input = record(value, 'toon');
+  return {
+    id: integer(input.id, 'toon.id'),
+    name: string(input.name, 'toon.name'),
+    description: nullableString(input.description, 'toon.description'),
+    sprite_url: nullableString(input.sprite_url, 'toon.sprite_url'),
+    tags: stringArray(input.tags, 'toon.tags'),
+    attributes: jsonRecord(input.attributes, 'toon.attributes'),
+  };
+}
+
+export function decodeToons(value: unknown): Toon[] {
+  return array(value, 'toons').map(decodeToon);
+}
+
+export function decodeLoadout(value: unknown): Loadout {
+  const input = record(value, 'loadout');
+  return {
+    id: integer(input.id, 'loadout.id'),
+    toon_id: integer(input.toon_id, 'loadout.toon_id'),
+    name: nullableString(input.name, 'loadout.name'),
+    gel: string(input.gel, 'loadout.gel'),
+    fighter_id: string(input.fighter_id, 'loadout.fighter_id'),
+    user_kit_id: nullableInteger(input.user_kit_id, 'loadout.user_kit_id'),
+    is_default: boolean(input.is_default, 'loadout.is_default'),
+  };
+}
+
+export function decodeLoadouts(value: unknown): Loadout[] {
+  return array(value, 'loadouts').map(decodeLoadout);
+}
+
+function decodeTelemetry(value: unknown): MatchTelemetry {
+  const input = record(value, 'match.telemetry');
+  return {
+    result: literal(input.result, matchResults, 'match.telemetry.result'),
+    result_step: integer(input.result_step, 'match.telemetry.result_step'),
+    result_p1_hp: number(input.result_p1_hp, 'match.telemetry.result_p1_hp'),
+    result_p2_hp: number(input.result_p2_hp, 'match.telemetry.result_p2_hp'),
+    seed: integer(input.seed, 'match.telemetry.seed'),
+    stage_id: string(input.stage_id, 'match.telemetry.stage_id'),
+    p1_fighter_id: string(input.p1_fighter_id, 'match.telemetry.p1_fighter_id'),
+    p2_fighter_id: string(input.p2_fighter_id, 'match.telemetry.p2_fighter_id'),
+    input_count: integer(input.input_count, 'match.telemetry.input_count'),
+    series_id: nullableInteger(input.series_id, 'match.telemetry.series_id'),
+  };
+}
+
+export function decodeMatch(value: unknown): Match {
+  const input = record(value, 'match');
+  return {
+    id: integer(input.id, 'match.id'),
+    series_id: nullableInteger(input.series_id, 'match.series_id'),
+    p1_toon_id: integer(input.p1_toon_id, 'match.p1_toon_id'),
+    p2_toon_id: nullableInteger(input.p2_toon_id, 'match.p2_toon_id'),
+    p1_gel: string(input.p1_gel, 'match.p1_gel'),
+    p2_gel: string(input.p2_gel, 'match.p2_gel'),
+    p1_fighter_id: string(input.p1_fighter_id, 'match.p1_fighter_id'),
+    p2_fighter_id: string(input.p2_fighter_id, 'match.p2_fighter_id'),
+    stage_id: string(input.stage_id, 'match.stage_id'),
+    seed: integer(input.seed, 'match.seed'),
+    status: matchStatus(input.status, 'match.status'),
+    result: nullableMatchResult(input.result, 'match.result'),
+    result_step: nullableInteger(input.result_step, 'match.result_step'),
+    result_p1_hp: nullableNumber(input.result_p1_hp, 'match.result_p1_hp'),
+    result_p2_hp: nullableNumber(input.result_p2_hp, 'match.result_p2_hp'),
+    last_step: integer(input.last_step, 'match.last_step'),
+    loop: integer(input.loop, 'match.loop'),
+    share_token: nullableString(input.share_token, 'match.share_token'),
+    telemetry: input.telemetry === null ? null : decodeTelemetry(input.telemetry),
+    allowed_transitions: array(input.allowed_transitions, 'match.allowed_transitions').map(
+      (item, index) => matchStatus(item, `match.allowed_transitions[${index}]`),
+    ),
+  };
+}
+
+function decodeFighterHud(value: unknown, label: string): FighterHud {
+  const input = record(value, label);
+  return {
+    hp: number(input.hp, `${label}.hp`),
+    meter: number(input.meter, `${label}.meter`),
+    rounds: integer(input.rounds, `${label}.rounds`),
+    pose: nullableString(input.pose, `${label}.pose`),
+    frame: nullableInteger(input.frame, `${label}.frame`),
+    x: nullableNumber(input.x, `${label}.x`),
+    lift: nullableNumber(input.lift, `${label}.lift`),
+  };
+}
+
+export function decodeMatchState(value: unknown): MatchState {
+  const input = record(value, 'match state');
+  return {
+    match_id: integer(input.match_id, 'match state.match_id'),
+    status: matchStatus(input.status, 'match state.status'),
+    step: integer(input.step, 'match state.step'),
+    last_step: integer(input.last_step, 'match state.last_step'),
+    bar: integer(input.bar, 'match state.bar'),
+    ceremony: literal(input.ceremony, ceremonyStates, 'match state.ceremony'),
+    p1: decodeFighterHud(input.p1, 'match state.p1'),
+    p2: decodeFighterHud(input.p2, 'match state.p2'),
+    timer: integer(input.timer, 'match state.timer'),
+    combo: integer(input.combo, 'match state.combo'),
+    p1_gel: string(input.p1_gel, 'match state.p1_gel'),
+    p2_gel: string(input.p2_gel, 'match state.p2_gel'),
+    p1_fighter_id: string(input.p1_fighter_id, 'match state.p1_fighter_id'),
+    p2_fighter_id: string(input.p2_fighter_id, 'match state.p2_fighter_id'),
+    stage_id: string(input.stage_id, 'match state.stage_id'),
+    seed: integer(input.seed, 'match state.seed'),
+    loop: integer(input.loop, 'match state.loop'),
+    leading: nullableMatchResult(input.leading, 'match state.leading'),
+    ann: nullableString(input.ann, 'match state.ann'),
+    sound_hooks: stringArray(input.sound_hooks, 'match state.sound_hooks'),
+    extra: jsonRecord(input.extra, 'match state.extra'),
+  };
 }

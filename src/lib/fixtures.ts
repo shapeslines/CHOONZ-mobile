@@ -6,7 +6,9 @@ import type {
   FighterKit,
   Gel,
   Health,
+  Loadout,
   Stage,
+  Toon,
 } from '@/lib/types';
 
 export const fixtureHealth: Health = {
@@ -172,3 +174,29 @@ export const fixtureKits: FighterKit[] = fixtureFighters.map((fighter) => ({
   notes: fighter.notes,
   moves: axelMoves,
 }));
+
+/** The P1 fixture identity is deterministic and never comes from a live session. */
+export const fixtureToons: Toon[] = [
+  {
+    id: 1,
+    name: 'Fixture Axel',
+    description: 'Local deterministic practice Toon.',
+    sprite_url: null,
+    tags: ['fixture', 'practice'],
+    attributes: { fighter_id: 'AXEL' },
+  },
+];
+
+export const fixtureLoadouts: Loadout[] = [
+  {
+    id: 1,
+    toon_id: fixtureToons[0]!.id,
+    name: 'Fixture sodium loadout',
+    gel: 'sodium',
+    fighter_id: 'AXEL',
+    user_kit_id: null,
+    is_default: true,
+  },
+];
+
+export const fixtureMatchSeed = 677;
