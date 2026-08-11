@@ -66,8 +66,16 @@ export function isLegacyAnonJwt(value: string): boolean {
   }
 }
 
-function isPublishableKey(value: string): boolean {
+export function isPublishableSupabaseKey(value: string): boolean {
   return value.startsWith(PUBLISHABLE_KEY_PREFIX) && value.length > PUBLISHABLE_KEY_PREFIX.length;
+}
+
+/** Validate the declared key class again at every client-construction boundary. */
+export function isValidPublicSupabaseKey(
+  value: string,
+  keySource: PublicSupabaseCredentials['keySource'],
+): boolean {
+  return keySource === 'publishable' ? isPublishableSupabaseKey(value) : isLegacyAnonJwt(value);
 }
 
 export function resolvePublicSupabaseCredentials(
@@ -80,7 +88,7 @@ export function resolvePublicSupabaseCredentials(
     return null;
   }
   if (config.supabasePublishableKey) {
-    if (!isPublishableKey(config.supabasePublishableKey)) {
+    if (!isValidPublicSupabaseKey(config.supabasePublishableKey, 'publishable')) {
       return null;
     }
     return {
@@ -90,7 +98,10 @@ export function resolvePublicSupabaseCredentials(
       isProduction: config.isProduction,
     };
   }
-  if (!config.supabaseLegacyAnonKey || !isLegacyAnonJwt(config.supabaseLegacyAnonKey)) {
+  if (
+    !config.supabaseLegacyAnonKey ||
+    !isValidPublicSupabaseKey(config.supabaseLegacyAnonKey, 'legacy-anon')
+  ) {
     return null;
   }
   return {

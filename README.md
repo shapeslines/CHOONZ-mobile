@@ -86,6 +86,8 @@ Current npm audit findings are treated as a conditional build-chain risk that
 collapses to Metro/image-size and Expo config-plugin/uuid advisories. CI must
 not accept untrusted binary assets until supported upstream fixes land. Keep the
 SDK 56 dependency set; do not force a downgrade merely to silence the audit.
+The attributable exception, advisory paths, owner, and expiry are recorded in
+[`docs/security/npm-audit-exception.md`](docs/security/npm-audit-exception.md).
 
 ## Verify
 

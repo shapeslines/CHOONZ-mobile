@@ -7,6 +7,7 @@ import type { RuntimeConfig } from '@/lib/config';
 import { ChoonzClientError } from '@/lib/errors';
 import { fixtureUser } from '@/lib/fixtures';
 import { clearProtectedQueries } from '@/lib/protected-queries';
+import { createSessionStorage } from '@/lib/session-storage';
 import {
   createChoonzSupabaseClient,
   resolvePublicSupabaseCredentials,
@@ -117,7 +118,11 @@ function LiveAuthProvider({
   credentials: PublicSupabaseCredentials;
   children: React.ReactNode;
 }) {
-  const supabase = useMemo(() => createChoonzSupabaseClient(credentials), [credentials]);
+  const sessionStorage = useMemo(() => createSessionStorage(), []);
+  const supabase = useMemo(
+    () => createChoonzSupabaseClient(credentials, sessionStorage),
+    [credentials, sessionStorage],
+  );
   const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');

@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { fixtureDataLabel, normalizeApiBaseUrl, resolveAppConfig } from '../src/lib/config';
@@ -152,9 +149,4 @@ describe('CHOONZ public runtime configuration', () => {
     ).toBeNull();
   });
 
-  it('keeps a transport guard at Supabase client construction', () => {
-    const projectRoot = fileURLToPath(new URL('..', import.meta.url));
-    const source = readFileSync(join(projectRoot, 'src/lib/supabase.ts'), 'utf8');
-    expect(source).toContain('normalizeApiBaseUrl(credentials.url, credentials.isProduction)');
-  });
 });

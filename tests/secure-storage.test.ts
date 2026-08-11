@@ -4,6 +4,7 @@ import {
   ChunkedStorage,
   createLocalStorageAdapter,
   isSecureStoreCompatibleKey,
+  secureStoreCleanupJournalKey,
   type KeyValueStorage,
 } from '../src/lib/secure-storage';
 
@@ -40,6 +41,12 @@ class FaultyStorage extends MemoryStorage {
     }
     await super.removeItem(key);
   }
+}
+
+function journalEntries(backing: MemoryStorage, key: string): unknown[] {
+  const value = backing.values.get(secureStoreCleanupJournalKey(key));
+  expect(value).toBeDefined();
+  return (JSON.parse(value!) as { entries: unknown[] }).entries;
 }
 
 describe('session storage', () => {
@@ -81,6 +88,54 @@ describe('session storage', () => {
     backing.failRemoveFor = null;
     await storage.removeItem('supabase.auth.token');
     expect(backing.values.size).toBe(0);
+  });
+
+  it('journals a stranded partial generation and retries it during remove', async () => {
+    const backing = new FaultyStorage();
+    const storage = new ChunkedStorage(backing, 256);
+    const key = 'supabase.auth.token';
+    await storage.setItem(key, 'first-session-'.repeat(100));
+
+    backing.failSetFor = /\.g2\.c1$/;
+    backing.failRemoveFor = /\.g2\.c0$/;
+    await expect(storage.setItem(key, 'second-session-'.repeat(100))).rejects.toThrow(
+      'injected write failure',
+    );
+
+    expect(backing.values.has(`${key}.g2.c0`)).toBe(true);
+    expect(journalEntries(backing, key)).toEqual([
+      expect.objectContaining({ generation: 2, state: 'pending' }),
+    ]);
+    expect(backing.values.get(secureStoreCleanupJournalKey(key))).not.toContain('session-');
+    expect([...backing.values.keys()].every(isSecureStoreCompatibleKey)).toBe(true);
+
+    backing.failSetFor = null;
+    backing.failRemoveFor = null;
+    await storage.removeItem(key);
+    expect(backing.values.size).toBe(0);
+  });
+
+  it('journals failed retired-generation cleanup and retries it during the next set', async () => {
+    const backing = new FaultyStorage();
+    const storage = new ChunkedStorage(backing, 256);
+    const key = 'supabase.auth.token';
+    await storage.setItem(key, 'first-session-'.repeat(100));
+
+    backing.failRemoveFor = /\.g1\.c0$/;
+    await storage.setItem(key, 'second-session-'.repeat(100));
+
+    expect(backing.values.has(`${key}.g1.c0`)).toBe(true);
+    expect(journalEntries(backing, key)).toEqual([
+      expect.objectContaining({ generation: 1, state: 'retired' }),
+    ]);
+    await expect(storage.getItem(key)).resolves.toBe('second-session-'.repeat(100));
+
+    backing.failRemoveFor = null;
+    await storage.setItem(key, 'third-session-'.repeat(100));
+    await expect(storage.getItem(key)).resolves.toBe('third-session-'.repeat(100));
+    expect(backing.values.has(`${key}.g1.c0`)).toBe(false);
+    expect(backing.values.has(`${key}.g2.c0`)).toBe(false);
+    expect(backing.values.has(secureStoreCleanupJournalKey(key))).toBe(false);
   });
 
   it('uses a direct localStorage-shaped adapter on web', async () => {
