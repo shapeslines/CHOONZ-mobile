@@ -43,6 +43,7 @@ export function AppScreen({
       <View style={styles.nav}>
         <NavButton href="/" label="STATUS" />
         <NavButton href="/catalog" label="CATALOG" />
+        <NavButton href="/fight" label="FIGHT" />
         <NavButton href="/profile" label="PROFILE" />
       </View>
     </SafeAreaView>
