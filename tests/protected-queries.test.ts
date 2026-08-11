@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   clearProtectedQueries,
+  fightQueryKey,
   protectedQueryKey,
   protectedQueryScope,
 } from '../src/lib/protected-queries';
@@ -19,6 +20,13 @@ describe('protected query cache', () => {
       'user-7',
       'catalog',
       'gels',
+    ]);
+    expect(fightQueryKey('user.user-7', 'match', '19')).toEqual([
+      'protected',
+      'user.user-7',
+      'fight',
+      'match',
+      '19',
     ]);
   });
 
@@ -43,7 +51,7 @@ describe('protected query cache', () => {
     const authProvider = readFileSync(
       join(projectRoot, 'src/providers/auth-provider.tsx'),
       'utf8',
-    );
+    ).replace(/\r\n/g, '\n');
     expect(authProvider).toContain('finally {\n      await clearProtectedCache();');
     expect(authProvider).toContain('if (!nextSession) {\n          clearProtectedCacheSilently();');
   });

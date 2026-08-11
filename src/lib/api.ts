@@ -5,10 +5,17 @@ import {
   decodeGels,
   decodeHealth,
   decodeKits,
+  decodeLoadout,
+  decodeLoadouts,
+  decodeMatch,
+  decodeMatchState,
   decodeStages,
+  decodeToon,
+  decodeToons,
   decodeUser,
 } from '@/lib/decoder';
 import { ChoonzClientError, ResponseDecodeError } from '@/lib/errors';
+import { FixtureMatchService } from '@/lib/fixture-match-service';
 import {
   fixtureCatalog,
   fixtureEngine,
@@ -28,11 +35,48 @@ import type {
   FighterKit,
   Gel,
   Health,
+  Loadout,
+  LoadoutCreateInput,
+  Match,
+  MatchActInput,
+  MatchCompleteInput,
+  MatchCreateInput,
+  MatchState,
+  MatchTickInput,
   Stage,
+  Toon,
+  ToonCreateInput,
 } from '@/lib/types';
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 type Decoder<T> = (value: unknown) => T;
+type HttpMethod = 'GET' | 'POST';
+
+export interface ChoonzApi {
+  getHealth(): Promise<Health>;
+  getMe(): Promise<ChoonzUser>;
+  getCatalog(): Promise<CatalogMeta>;
+  getEngine(): Promise<EngineMeta>;
+  getGels(): Promise<Gel[]>;
+  getFighters(): Promise<Fighter[]>;
+  getStages(): Promise<Stage[]>;
+  getKits(): Promise<FighterKit[]>;
+  getToons(): Promise<Toon[]>;
+  createToon(input: ToonCreateInput): Promise<Toon>;
+  getLoadouts(): Promise<Loadout[]>;
+  createLoadout(input: LoadoutCreateInput): Promise<Loadout>;
+  createMatch(input: MatchCreateInput): Promise<Match>;
+  getMatch(matchId: number): Promise<Match>;
+  startMatch(matchId: number): Promise<Match>;
+  pauseMatch(matchId: number): Promise<Match>;
+  resumeMatch(matchId: number): Promise<Match>;
+  completeMatch(matchId: number, input?: MatchCompleteInput): Promise<Match>;
+  cancelMatch(matchId: number): Promise<Match>;
+  tickMatch(matchId: number, input?: MatchTickInput): Promise<MatchState>;
+  actMatch(matchId: number, input: MatchActInput): Promise<MatchState>;
+  getMatchState(matchId: number): Promise<MatchState>;
+  rematch(matchId: number): Promise<Match>;
+}
 
 export interface ChoonzApiClientOptions {
   config: RuntimeConfig;
@@ -41,8 +85,13 @@ export interface ChoonzApiClientOptions {
   fetcher?: FetchLike;
 }
 
-export class ChoonzApiClient {
+/**
+ * The one service boundary for both API snapshots and labelled fixture mode.
+ * The fixture service is intentionally never passed a token, URL, or fetcher.
+ */
+export class ChoonzApiClient implements ChoonzApi {
   private readonly fetcher: FetchLike;
+  private readonly fixtures = new FixtureMatchService();
 
   constructor(private readonly options: ChoonzApiClientOptions) {
     this.fetcher = options.fetcher ?? fetch;
@@ -80,6 +129,133 @@ export class ChoonzApiClient {
     return this.fromMode('/catalog/kits', decodeKits, fixtureKits, true);
   }
 
+  getToons(): Promise<Toon[]> {
+    return this.fromFightMode('/toons', decodeToons, () => this.fixtures.getToons());
+  }
+
+  createToon(input: ToonCreateInput): Promise<Toon> {
+    return this.fromFightMode('/toons', decodeToon, () => this.fixtures.createToon(input), 'POST', input);
+  }
+
+  getLoadouts(): Promise<Loadout[]> {
+    return this.fromFightMode('/loadouts', decodeLoadouts, () => this.fixtures.getLoadouts());
+  }
+
+  createLoadout(input: LoadoutCreateInput): Promise<Loadout> {
+    return this.fromFightMode(
+      '/loadouts',
+      decodeLoadout,
+      () => this.fixtures.createLoadout(input),
+      'POST',
+      input,
+    );
+  }
+
+  createMatch(input: MatchCreateInput): Promise<Match> {
+    return this.fromFightMode('/matches', decodeMatch, () => this.fixtures.createMatch(input), 'POST', input);
+  }
+
+  getMatch(matchId: number): Promise<Match> {
+    return this.fromFightMode(`/matches/${matchId}`, decodeMatch, () => this.fixtures.getMatch(matchId));
+  }
+
+  startMatch(matchId: number): Promise<Match> {
+    return this.fromFightMode(
+      `/matches/${matchId}/start`,
+      decodeMatch,
+      () => this.fixtures.startMatch(matchId),
+      'POST',
+    );
+  }
+
+  pauseMatch(matchId: number): Promise<Match> {
+    return this.fromFightMode(
+      `/matches/${matchId}/pause`,
+      decodeMatch,
+      () => this.fixtures.pauseMatch(matchId),
+      'POST',
+    );
+  }
+
+  resumeMatch(matchId: number): Promise<Match> {
+    return this.fromFightMode(
+      `/matches/${matchId}/resume`,
+      decodeMatch,
+      () => this.fixtures.resumeMatch(matchId),
+      'POST',
+    );
+  }
+
+  completeMatch(matchId: number, input: MatchCompleteInput = {}): Promise<Match> {
+    return this.fromFightMode(
+      `/matches/${matchId}/complete`,
+      decodeMatch,
+      () => this.fixtures.completeMatch(matchId, input),
+      'POST',
+      input,
+    );
+  }
+
+  cancelMatch(matchId: number): Promise<Match> {
+    return this.fromFightMode(
+      `/matches/${matchId}/cancel`,
+      decodeMatch,
+      () => this.fixtures.cancelMatch(matchId),
+      'POST',
+    );
+  }
+
+  tickMatch(matchId: number, input: MatchTickInput = {}): Promise<MatchState> {
+    return this.fromFightMode(
+      `/matches/${matchId}/tick`,
+      decodeMatchState,
+      () => this.fixtures.tickMatch(matchId, input),
+      'POST',
+      input,
+    );
+  }
+
+  actMatch(matchId: number, input: MatchActInput): Promise<MatchState> {
+    return this.fromFightMode(
+      `/matches/${matchId}/act`,
+      decodeMatchState,
+      () => this.fixtures.actMatch(matchId, input),
+      'POST',
+      input,
+    );
+  }
+
+  getMatchState(matchId: number): Promise<MatchState> {
+    return this.fromFightMode(
+      `/matches/${matchId}/state`,
+      decodeMatchState,
+      () => this.fixtures.getMatchState(matchId),
+    );
+  }
+
+  rematch(matchId: number): Promise<Match> {
+    return this.fromFightMode(
+      `/matches/${matchId}/rematch`,
+      decodeMatch,
+      () => this.fixtures.rematch(matchId),
+      'POST',
+    );
+  }
+
+  private async fromFightMode<T>(
+    path: string,
+    decoder: Decoder<T>,
+    fixture: () => Promise<T>,
+    method: HttpMethod = 'GET',
+    body?: unknown,
+  ): Promise<T> {
+    if (this.options.config.mode === 'fixtures') {
+      return fixture();
+    }
+    const config = this.requireApiConfiguration();
+    return this.request(`${config.apiBaseUrl}${path}`, decoder, true, method, body);
+  }
+
   private async fromMode<T>(
     path: string,
     decoder: Decoder<T>,
@@ -113,8 +289,13 @@ export class ChoonzApiClient {
     url: string,
     decoder: Decoder<T>,
     requiresAuthentication: boolean,
+    method: HttpMethod = 'GET',
+    body?: unknown,
   ): Promise<T> {
     const headers: Record<string, string> = { Accept: 'application/json' };
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
     if (requiresAuthentication) {
       const accessToken = await this.options.getAccessToken();
       if (!accessToken) {
@@ -125,7 +306,11 @@ export class ChoonzApiClient {
 
     let response: Response;
     try {
-      response = await this.fetcher(url, { method: 'GET', headers });
+      response = await this.fetcher(url, {
+        method,
+        headers,
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
     } catch {
       throw new ChoonzClientError('network', 'Could not reach the CHOONZ API.');
     }

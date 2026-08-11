@@ -16,6 +16,10 @@ export function protectedQueryKey(scope: string, ...resource: string[]): readonl
   return [...PROTECTED_QUERY_PREFIX, scope, ...resource];
 }
 
+export function fightQueryKey(scope: string, ...resource: string[]): readonly string[] {
+  return protectedQueryKey(scope, 'fight', ...resource);
+}
+
 /** Cancel first, but always remove protected data even if cancellation races or fails. */
 export async function clearProtectedQueries(
   queryClient: Pick<QueryClient, 'cancelQueries' | 'removeQueries'>,
