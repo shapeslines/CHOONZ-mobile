@@ -2,72 +2,28 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
-  ci:
+  mobile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # Seed repo has no package.json / lockfile yet. Cache only when a lockfile
-      # exists — setup-node cache:npm fails hard without package-lock.json.
-      - name: Detect npm lockfile
-        id: lock
-        run: |
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ] || [ -f yarn.lock ]; then
-            echo "has_lock=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_lock=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Set up Node (with cache)
-        if: steps.lock.outputs.has_lock == 'true'
+      - name: Use Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Set up Node (no cache)
-        if: steps.lock.outputs.has_lock != 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        run: |
-          if [ -f package.json ]; then
-            if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-              npm ci
-            else
-              npm install
-            fi
-          else
-            echo "No package.json yet (seed state); skipping install."
-          fi
-
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
       - name: Lint
-        run: |
-          if [ -f package.json ] && grep -q '"lint"' package.json; then
-            npm run lint
-          else
-            echo "No lint script; skipping."
-          fi
-
-      - name: Typecheck
-        run: |
-          if [ -f package.json ] && grep -q '"typecheck"' package.json; then
-            npm run typecheck
-          else
-            echo "No typecheck script; skipping."
-          fi
-
-      - name: Build (web export)
-        run: |
-          if [ -f package.json ] && grep -q '"build"' package.json; then
-            npm run build
-          else
-            echo "No build script; skipping."
-          fi
+        run: npm run lint
+      - name: Type check
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Expo config validation
+        run: npm run expo:check
+      - name: Expo web export
+        run: npm run build

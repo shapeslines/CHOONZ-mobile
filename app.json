@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "CHOONZ",
+    "slug": "choonz-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "choonz",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "web": {
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

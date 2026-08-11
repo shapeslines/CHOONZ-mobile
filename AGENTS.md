@@ -4,15 +4,16 @@ Read first. Mobile client for CHOONZ.
 
 ## What this is
 
-Fresh greenfield Expo Router + React Native client for the CHOONZ fighting-game
-backend (`shapeslines/CHOONZ`). Scaffolded empty 2026-08-09; first claiming
-session runs `npx create-expo-app . --template blank-typescript` and replaces
-this seed with the working scaffold.
+Expo Router + React Native client for the CHOONZ fighting-game backend
+(`shapeslines/CHOONZ`). The first shipped slice is intentionally read-only:
+service status, authenticated identity, and the static combat catalog.
 
 ## Stack
 
-TypeScript / Expo SDK 51+ / React Native / Expo Router / Supabase Auth /
-TanStack Query / EAS Build. See `README.md` for the full stack table.
+TypeScript / Expo SDK 56 / React Native 0.85 / React 19 / Expo Router /
+Supabase Auth / TanStack Query. Node 22+ is required. Routes live in `src/app`.
+Use only `expo-router` imports for app navigation; do not add direct
+`@react-navigation/*` app imports or dependencies.
 
 ## Repository rules
 
@@ -36,14 +37,30 @@ TanStack Query / EAS Build. See `README.md` for the full stack table.
 - Architecture reference: CHOONZ/ARCHITECTURE.md (cross-repo)
 - World-instantiation plan: `C:\Users\Carson\Desktop\PROCESSING\2026-08-09-world-instantiation-plan.md`
 
+## Public environment contract
+
+- `EXPO_PUBLIC_CHOONZ_MODE=fixtures|api`; development defaults to `fixtures`.
+  A production build with a missing or invalid mode, or API mode without a valid
+  API base URL, fails closed at the client boundary.
+- `EXPO_PUBLIC_CHOONZ_API_BASE_URL` is required only for `api` mode.
+- `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configure
+  Supabase Auth. `EXPO_PUBLIC_SUPABASE_ANON_KEY` is a legacy fallback only.
+- `EXPO_PUBLIC_*` values are visible in a shipped app. Never add a service-role,
+  secret key, database URL/password, or any private value to this project.
+
 ## Verification
 
-- Tests: `npm test` (Vitest) once dependencies are installed
+- Install: `npm ci`
+- Tests: `npm test` (Vitest)
 - Type check: `npm run typecheck`
 - Lint: `npm run lint`
-- Build: `npx expo prebuild` (native) / `npx expo export` (web)
+- Expo config: `npm run expo:check`
+- Web build: `npm run build`
 
 ## Conventions
 
 Follow `shapeslines/Clubheavy-Mobile` and `shapeslines/Shapeslines-Mobile` for
 directory layout, hook patterns, and adapter shape.
+
+This repository does not own match mutations, OAuth/provider deep-link flows,
+EAS linking, or store submission in the current slice.

@@ -2,27 +2,89 @@
 
 [![CI](https://github.com/shapeslines/CHOONZ-mobile/actions/workflows/ci.yml/badge.svg)](https://github.com/shapeslines/CHOONZ-mobile/actions/workflows/ci.yml)
 
-Mobile client for **CHOONZ** - the fighting-game engine. Built with **Expo Router + React Native**, consuming the **CHOONZ headless backend** (`shapeslines/CHOONZ`, Python FastAPI + Mangum + Neon Postgres + Serverless) over its bearer-token API.
+Mobile client for **CHOONZ** — the fighting-game engine. This first slice is a
+read-only Expo Router app for service status, Supabase email/password sign-in,
+profile, and the static roster catalog. It consumes the **CHOONZ headless
+backend** over its bearer-token API.
 
-> **Status:** fresh greenfield, scaffolded 2026-08-09. Archived `shapeslines/TINYTOONZ-Mobile` is reference-only - NOT the base. First claiming session runs `npx create-expo-app . --template blank-typescript` to materialize the Expo structure on top of this seed.
+> **Status:** Expo SDK 56 bootstrap. No match mutations, OAuth/deep-link provider
+> flows, EAS linking, or store submission are included.
 
 ## Stack
 
 | Concern        | Choice                                              |
 | -------------- | --------------------------------------------------- |
-| Language       | TypeScript 5.x                                      |
-| Runtime        | Expo SDK 51+ / React Native 0.74+                   |
-| Navigation     | Expo Router (file-based)                            |
-| Auth           | Supabase Auth (managed OIDC bearer; matches CHOONZ) |
+| Language       | TypeScript 6.x                                      |
+| Runtime        | Expo SDK 56 / React Native 0.85 / React 19          |
+| Navigation     | Expo Router file routes in `src/app`                |
+| Auth           | Supabase Auth, SecureStore-backed PKCE sessions     |
 | Data           | CHOONZ bearer-token API + TanStack Query cache      |
-| State          | URL + server cache first; Zustand only if needed    |
-| Deploy         | EAS Build + Expo Updates                            |
+| Validation     | Runtime decoders for every consumed backend shape   |
+| Tests          | Vitest; Expo config and web-export checks in CI     |
 
-## House patterns (target)
+## Run locally
 
-- **bff-boundary** - CHOONZ is the resource server half; this repo is the BFF client. No short-lived tokens in async storage; session via SecureStore.
-- **supabase-house-standard** - share the CHOONZ Supabase project's Auth (DATA-1 / AUTH-1 aligned).
-- **custody-visibility-audit** - all data is owner-scoped via the CHOONZ bearer; this client never owns truth.
+Node 22+ is required.
+
+```powershell
+npm ci
+Copy-Item .env.example .env
+npm start
+```
+
+The committed example starts in `fixtures` mode, so it never calls a live API.
+Fixture screens permanently display `FIXTURE DATA — LOCAL`.
+
+To read the live API, set `EXPO_PUBLIC_CHOONZ_MODE=api`, a valid public
+`EXPO_PUBLIC_CHOONZ_API_BASE_URL`, and the public Supabase URL/key values below.
+Sign in with email/password, then the client sends the Supabase access token as
+`Authorization: Bearer <token>` to `/me` and `/catalog*`.
+
+## Public environment contract
+
+Expo inlines every `EXPO_PUBLIC_*` variable into the app bundle. Treat these as
+public configuration, not secrets.
+
+| Variable | Purpose |
+| --- | --- |
+| `EXPO_PUBLIC_CHOONZ_MODE` | `fixtures` or `api`; dev defaults to `fixtures`. Production missing/invalid modes fail closed. |
+| `EXPO_PUBLIC_CHOONZ_API_BASE_URL` | Required for `api` mode; must be an `http` or `https` base URL. |
+| `EXPO_PUBLIC_SUPABASE_URL` | Shared CHOONZ Supabase project URL. |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Preferred public Supabase key. |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Optional legacy fallback only. |
+
+Never put `service_role`, `sb_secret_` keys, database credentials, or other
+private values in this app or any `EXPO_PUBLIC_*` variable.
+
+Native sessions use a SecureStore-compatible chunking adapter so large auth
+payloads stay within the native storage boundary. Web uses `localStorage` when
+available. The Supabase client uses `flowType: 'pkce'`, persistent sessions,
+automatic refresh, and `detectSessionInUrl: false`; there is no OAuth or
+deep-link provider flow in this slice.
+
+## API boundary
+
+The typed runtime client consumes only these read routes:
+
+- Public: `GET /health`
+- Authenticated: `GET /me`, `GET /catalog`, `GET /catalog/engine`,
+  `GET /catalog/gels`, `GET /catalog/fighters`, `GET /catalog/stages`, and
+  `GET /catalog/kits`
+
+It distinguishes configuration, authentication, network, and malformed/HTTP
+response failures. A `401` invalidates the local session and clears cached data.
+
+## Verify
+
+```powershell
+npm test
+npm run lint
+npm run typecheck
+npm run expo:check
+npm run build
+```
+
+CI uses Node 22 and runs `npm ci` and every command above on every push and PR.
 
 ## Related
 
