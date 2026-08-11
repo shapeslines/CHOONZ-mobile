@@ -9,15 +9,36 @@ approval and grants no EAS, store, native-build, or production-web authority.
 | --- | --- |
 | Decision owner | CHOONZ project owner |
 | Accepted | 2026-08-10; ARC677 P1 addendum approved 2026-08-11 |
-| Approval provenance | Owner ruling in the active CHOONZ task; Coordinator task `019feea2-f315-7dd3-ab34-3c3cafd02960` requires a separate three-path ACT. |
+| Approval provenance | Owner ruling in the active CHOONZ task approved the three-path addendum. After the final UI candidate triggered reapproval, the owner responded exactly `approved`; no timestamp is asserted for that response. Coordinator task `019feea2-f315-7dd3-ab34-3c3cafd02960` granted the one-path final-candidate amendment. |
 | Acceptance basis | ARC674 review-only SDK 56 candidate plus ARC677 P1 rendered-test candidate; no deployment |
-| Candidate lineage | Mobile core commit `5cb0f57bdf6d7b50360880a9454d0467364e3f36` |
-| Candidate `package.json` | 1,594 bytes; SHA-256 `67858eef1f652b6a45e3026f6e91acc10c3ec8ccf3920e22db2c0bbacbe45ac0` |
+| Candidate lineage | Mobile core `5cb0f57bdf6d7b50360880a9454d0467364e3f36`; dependency exception `69038f9adb351064c21d40bd5a077f5d4d54559c`; final reviewed UI candidate `6177b528ba3113751f7945ab503dce26b40eab60` |
+| Candidate `package.json` | 1,776 bytes; SHA-256 `69d30f281a52b8897794a99a899f1d5c5f1abc736c8711016b96100bd9ee6930` |
 | Candidate `package-lock.json` | 615,708 bytes; SHA-256 `fe86d80b10d5a78361c5080582df51a6616e5098d9c34b6fd8e5bbffafd5b805` |
 | Audit tool | Node.js `24.14.1`; npm `11.11.0`; `npm audit --json` |
 | Audit receipt | 2026-08-11T06:27:00.0576742Z–2026-08-11T06:27:02.3855169Z; JSON SHA-256 `f71317e57aa2f6ff0e92953debba6ea0d3d648e36782960e8baaa39156589d6f` |
 | Review by | 2026-09-10 or the next compatible Expo/RNTL fix, whichever is first |
 | Removal condition | Compatible upstream fixes are available and the Expo SDK 56 dependency set can be updated and re-audited. |
+
+## Final-candidate reapproval
+
+The owner's exact response `approved` consumes the package/Jest/CI reapproval
+trigger only for candidate
+`6177b528ba3113751f7945ab503dce26b40eab60`. Relative to the dependency
+exception commit, `package.json` changes only the `test:screen` script, inline
+Jest configuration, and the accepted Node engine contract. The CI change only
+invokes `test:screen` immediately after `npm test`.
+
+The five exact dependency pins and installed graph are unchanged. The lockfile
+remains SHA-256
+`fe86d80b10d5a78361c5080582df51a6616e5098d9c34b6fd8e5bbffafd5b805`.
+The audit remains exactly 22 findings (15 high, 7 moderate, 0 critical) with
+only the same three leaf advisories listed below. The final-candidate changes
+have zero runtime, bundle, authentication, secret, production, or deployment
+effect.
+
+This reapproval does not waive the boundary below. Every future package,
+lockfile, Jest, or CI change triggers reapproval again, as do all other listed
+conditions.
 
 ## Locked rendered-test dependencies
 
