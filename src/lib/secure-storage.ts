@@ -5,17 +5,29 @@ export interface KeyValueStorage {
 }
 
 interface ChunkManifest {
-  version: 1;
+  version: 2;
   chunks: number;
+  generation: number;
   encoding: 'uri';
 }
 
 export const DEFAULT_SECURE_STORE_CHUNK_SIZE = 1400;
-const INLINE_PREFIX = 'choonz:v1:';
-const CHUNK_MARKER = '::chunk::';
+export const SECURE_STORE_KEY_PATTERN = /^[\w.-]+$/;
 
-function chunkKey(key: string, index: number): string {
-  return `${key}${CHUNK_MARKER}${index}`;
+export function isSecureStoreCompatibleKey(key: string): boolean {
+  return SECURE_STORE_KEY_PATTERN.test(key);
+}
+
+function assertSecureStoreKey(key: string): void {
+  if (!isSecureStoreCompatibleKey(key)) {
+    throw new Error('SecureStore key must contain only letters, numbers, underscores, periods, or hyphens.');
+  }
+}
+
+function chunkKey(key: string, generation: number, index: number): string {
+  const next = `${key}.g${generation}.c${index}`;
+  assertSecureStoreKey(next);
+  return next;
 }
 
 function parseManifest(value: string | null): ChunkManifest | null {
@@ -28,23 +40,32 @@ function parseManifest(value: string | null): ChunkManifest | null {
       parsed &&
       typeof parsed === 'object' &&
       !Array.isArray(parsed) &&
-      (parsed as Record<string, unknown>).version === 1 &&
+      (parsed as Record<string, unknown>).version === 2 &&
       (parsed as Record<string, unknown>).encoding === 'uri' &&
       Number.isInteger((parsed as Record<string, unknown>).chunks) &&
-      Number((parsed as Record<string, unknown>).chunks) > 0
+      Number((parsed as Record<string, unknown>).chunks) > 0 &&
+      Number.isInteger((parsed as Record<string, unknown>).generation) &&
+      Number((parsed as Record<string, unknown>).generation) > 0
     ) {
       return parsed as ChunkManifest;
     }
   } catch {
-    // A legacy raw Supabase value is not a chunk manifest.
+    // A pre-adapter value is returned as-is for the Supabase client to handle.
   }
   return null;
 }
 
+function nextGeneration(previous: ChunkManifest | null): number {
+  if (!previous || previous.generation >= Number.MAX_SAFE_INTEGER - 1) {
+    return 1;
+  }
+  return previous.generation + 1;
+}
+
 /**
- * A Supabase storage adapter for native SecureStore. SecureStore values have a
- * conservative size boundary, so encoded sessions are split before storage.
- * The base key is a manifest only after all chunks have been persisted.
+ * A native SecureStore adapter. Every payload is encoded into generation-scoped
+ * chunks whose keys satisfy SecureStore's `^[\\w.-]+$` grammar. New-generation
+ * chunks are persisted before their manifest switches the active session.
  */
 export class ChunkedStorage implements KeyValueStorage {
   constructor(
@@ -57,21 +78,20 @@ export class ChunkedStorage implements KeyValueStorage {
   }
 
   async getItem(key: string): Promise<string | null> {
+    assertSecureStoreKey(key);
     const base = await this.storage.getItem(key);
     if (base === null) {
       return null;
-    }
-    if (base.startsWith(INLINE_PREFIX)) {
-      return this.decode(base.slice(INLINE_PREFIX.length));
     }
 
     const manifest = parseManifest(base);
     if (!manifest) {
       return base;
     }
-
     const chunks = await Promise.all(
-      Array.from({ length: manifest.chunks }, (_, index) => this.storage.getItem(chunkKey(key, index))),
+      Array.from({ length: manifest.chunks }, (_, index) =>
+        this.storage.getItem(chunkKey(key, manifest.generation, index)),
+      ),
     );
     if (chunks.some((chunk) => chunk === null)) {
       return null;
@@ -80,37 +100,68 @@ export class ChunkedStorage implements KeyValueStorage {
   }
 
   async setItem(key: string, value: string): Promise<void> {
+    assertSecureStoreKey(key);
     const previous = parseManifest(await this.storage.getItem(key));
+    const generation = nextGeneration(previous);
     const encoded = encodeURIComponent(value);
-
-    if (encoded.length <= this.chunkSize) {
-      await this.storage.setItem(key, `${INLINE_PREFIX}${encoded}`);
-      await this.removeChunks(key, previous?.chunks ?? 0);
-      return;
-    }
-
     const chunks = Array.from(
-      { length: Math.ceil(encoded.length / this.chunkSize) },
+      { length: Math.max(1, Math.ceil(encoded.length / this.chunkSize)) },
       (_, index) => encoded.slice(index * this.chunkSize, (index + 1) * this.chunkSize),
     );
-    await Promise.all(chunks.map((chunk, index) => this.storage.setItem(chunkKey(key, index), chunk)));
-    await this.storage.setItem(
-      key,
-      JSON.stringify({ version: 1, chunks: chunks.length, encoding: 'uri' } satisfies ChunkManifest),
-    );
-    await this.removeChunks(key, Math.max(0, (previous?.chunks ?? 0) - chunks.length), chunks.length);
+    const newChunkKeys = chunks.map((_chunk, index) => chunkKey(key, generation, index));
+
+    try {
+      for (const [index, chunk] of chunks.entries()) {
+        await this.storage.setItem(newChunkKeys[index]!, chunk);
+      }
+    } catch (error) {
+      await this.removeChunkKeysBestEffort(newChunkKeys);
+      throw error;
+    }
+
+    try {
+      await this.storage.setItem(
+        key,
+        JSON.stringify({ version: 2, chunks: chunks.length, generation, encoding: 'uri' } satisfies ChunkManifest),
+      );
+    } catch (error) {
+      await this.removeChunkKeysBestEffort(newChunkKeys);
+      throw error;
+    }
+
+    if (previous) {
+      await this.removeChunkKeysBestEffort(this.chunkKeysForManifest(key, previous));
+    }
   }
 
   async removeItem(key: string): Promise<void> {
+    assertSecureStoreKey(key);
     const manifest = parseManifest(await this.storage.getItem(key));
+    if (manifest) {
+      // Keep the manifest until all chunks are gone, so a later retry can clean up.
+      await this.removeChunkKeys(this.chunkKeysForManifest(key, manifest));
+    }
     await this.storage.removeItem(key);
-    await this.removeChunks(key, manifest?.chunks ?? 0);
   }
 
-  private async removeChunks(key: string, count: number, startAt = 0): Promise<void> {
-    await Promise.all(
-      Array.from({ length: count }, (_, index) => this.storage.removeItem(chunkKey(key, startAt + index))),
+  private chunkKeysForManifest(key: string, manifest: ChunkManifest): string[] {
+    return Array.from({ length: manifest.chunks }, (_, index) =>
+      chunkKey(key, manifest.generation, index),
     );
+  }
+
+  private async removeChunkKeys(keys: string[]): Promise<void> {
+    for (const chunk of keys) {
+      await this.storage.removeItem(chunk);
+    }
+  }
+
+  private async removeChunkKeysBestEffort(keys: string[]): Promise<void> {
+    try {
+      await this.removeChunkKeys(keys);
+    } catch {
+      // A future remove can retry; never report cleanup as a failed session write.
+    }
   }
 
   private decode(value: string): string | null {

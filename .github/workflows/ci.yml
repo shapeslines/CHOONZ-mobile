@@ -25,5 +25,7 @@ jobs:
         run: npm test
       - name: Expo config validation
         run: npm run expo:check
+      - name: Expo Doctor
+        run: npm run expo:doctor
       - name: Expo web export
         run: npm run build

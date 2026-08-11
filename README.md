@@ -48,10 +48,10 @@ public configuration, not secrets.
 | Variable | Purpose |
 | --- | --- |
 | `EXPO_PUBLIC_CHOONZ_MODE` | `fixtures` or `api`; dev defaults to `fixtures`. Production missing/invalid modes fail closed. |
-| `EXPO_PUBLIC_CHOONZ_API_BASE_URL` | Required for `api` mode; must be an `http` or `https` base URL. |
-| `EXPO_PUBLIC_SUPABASE_URL` | Shared CHOONZ Supabase project URL. |
-| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Preferred public Supabase key. |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Optional legacy fallback only. |
+| `EXPO_PUBLIC_CHOONZ_API_BASE_URL` | Required for `api` mode; HTTPS in production, or HTTP only on explicit development loopback (`localhost`, `127.0.0.1`, `[::1]`). |
+| `EXPO_PUBLIC_SUPABASE_URL` | Shared CHOONZ Supabase URL; follows the same HTTPS/loopback rule. |
+| `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Preferred public Supabase key; must begin `sb_publishable_`. |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Optional legacy fallback only: a decodable JWT whose payload role is exactly `anon`. An invalid primary key never falls back. |
 
 Never put `service_role`, `sb_secret_` keys, database credentials, or other
 private values in this app or any `EXPO_PUBLIC_*` variable.
@@ -74,6 +74,19 @@ The typed runtime client consumes only these read routes:
 It distinguishes configuration, authentication, network, and malformed/HTTP
 response failures. A `401` invalidates the local session and clears cached data.
 
+## Security and release posture
+
+The web export is validation-only in this slice; production web deployment is
+deferred. Browser sessions use `localStorage`, so any web deployment requires a
+CSP and review proving that no unreviewed third-party scripts can access the
+origin. Native protected-query data is cancelled and removed on sign-out, 401,
+and other auth-state loss.
+
+Current npm audit findings are treated as a conditional build-chain risk that
+collapses to Metro/image-size and Expo config-plugin/uuid advisories. CI must
+not accept untrusted binary assets until supported upstream fixes land. Keep the
+SDK 56 dependency set; do not force a downgrade merely to silence the audit.
+
 ## Verify
 
 ```powershell
@@ -81,6 +94,7 @@ npm test
 npm run lint
 npm run typecheck
 npm run expo:check
+npm run expo:doctor
 npm run build
 ```
 

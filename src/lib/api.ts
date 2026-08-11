@@ -19,7 +19,7 @@ import {
   fixtureStages,
   fixtureUser,
 } from '@/lib/fixtures';
-import type { RuntimeConfig } from '@/lib/config';
+import { normalizeApiBaseUrl, type RuntimeConfig } from '@/lib/config';
 import type {
   CatalogMeta,
   ChoonzUser,
@@ -95,7 +95,12 @@ export class ChoonzApiClient {
 
   private requireApiConfiguration(): { apiBaseUrl: string } {
     const { config } = this.options;
-    if (config.mode !== 'api' || !config.apiBaseUrl || config.configurationIssue) {
+    if (
+      config.mode !== 'api' ||
+      !config.apiBaseUrl ||
+      config.configurationIssue ||
+      normalizeApiBaseUrl(config.apiBaseUrl, config.isProduction) !== config.apiBaseUrl
+    ) {
       throw new ChoonzClientError(
         'configuration',
         config.configurationIssue ?? 'CHOONZ API mode is not safely configured.',

@@ -52,6 +52,26 @@ describe('CHOONZ API client', () => {
     expect(invalidations).toBe(1);
   });
 
+  it('refuses to acquire or send a bearer token to a plaintext remote endpoint', async () => {
+    let tokenReads = 0;
+    let fetches = 0;
+    const client = new ChoonzApiClient({
+      config: { ...apiConfig, apiBaseUrl: 'http://api.choonz.example' },
+      getAccessToken: async () => {
+        tokenReads += 1;
+        return 'access-token';
+      },
+      fetcher: async () => {
+        fetches += 1;
+        return Response.json({});
+      },
+    });
+
+    await expect(client.getMe()).rejects.toMatchObject({ kind: 'configuration' });
+    expect(tokenReads).toBe(0);
+    expect(fetches).toBe(0);
+  });
+
   it('rejects malformed response payloads instead of accepting an unsafe shape', () => {
     expect(() => decodeHealth({ status: 'ok', env: 'dev', version: 'x', engine_loop: '128' })).toThrow(
       ResponseDecodeError,

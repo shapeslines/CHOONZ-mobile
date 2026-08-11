@@ -20,4 +20,17 @@ describe('Expo Router routes', () => {
     expect(source).toContain("from 'expo-router'");
     expect(source).not.toContain('@react-navigation/');
   });
+
+  it('wires the Profile route to the typed backend /me reader', () => {
+    const profile = readFileSync(join(projectRoot, 'src/app/profile.tsx'), 'utf8');
+    expect(profile).toContain("protectedQueryKey(queryScope ?? 'inactive', 'me')");
+    expect(profile).toContain('api.getMe()');
+    expect(profile).toContain('enabled: queryScope !== null');
+  });
+
+  it('disables protected catalog reads without a fixture or authenticated scope', () => {
+    const catalog = readFileSync(join(projectRoot, 'src/app/catalog.tsx'), 'utf8');
+    expect(catalog).toContain('enabled: protectedEnabled');
+    expect(catalog).toContain('protectedQueryKey(scope, \'catalog\')');
+  });
 });

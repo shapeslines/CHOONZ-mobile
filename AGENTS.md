@@ -42,9 +42,13 @@ Use only `expo-router` imports for app navigation; do not add direct
 - `EXPO_PUBLIC_CHOONZ_MODE=fixtures|api`; development defaults to `fixtures`.
   A production build with a missing or invalid mode, or API mode without a valid
   API base URL, fails closed at the client boundary.
-- `EXPO_PUBLIC_CHOONZ_API_BASE_URL` is required only for `api` mode.
+- `EXPO_PUBLIC_CHOONZ_API_BASE_URL` is required only for `api` mode and must use
+  HTTPS in production. Development HTTP is limited to `localhost`, `127.0.0.1`,
+  or `[::1]`.
 - `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configure
-  Supabase Auth. `EXPO_PUBLIC_SUPABASE_ANON_KEY` is a legacy fallback only.
+  Supabase Auth and follow the same transport rule. The primary key must begin
+  `sb_publishable_`; `EXPO_PUBLIC_SUPABASE_ANON_KEY` is only a decodable legacy
+  JWT with role `anon`, and never overrides an invalid primary key.
 - `EXPO_PUBLIC_*` values are visible in a shipped app. Never add a service-role,
   secret key, database URL/password, or any private value to this project.
 
@@ -55,6 +59,7 @@ Use only `expo-router` imports for app navigation; do not add direct
 - Type check: `npm run typecheck`
 - Lint: `npm run lint`
 - Expo config: `npm run expo:check`
+- Expo Doctor: `npm run expo:doctor`
 - Web build: `npm run build`
 
 ## Conventions
@@ -64,3 +69,8 @@ directory layout, hook patterns, and adapter shape.
 
 This repository does not own match mutations, OAuth/provider deep-link flows,
 EAS linking, or store submission in the current slice.
+
+Web export is validation-only. Do not deploy the web target without a CSP and
+third-party-script review: browser session persistence uses localStorage. Keep
+untrusted binary assets out of CI while upstream Metro/image-size and Expo
+config-plugin/uuid build-chain advisories remain; do not force an Expo SDK downgrade.

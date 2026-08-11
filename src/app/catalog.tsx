@@ -2,24 +2,60 @@ import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { errorMessage } from '@/lib/errors';
+import { protectedQueryKey, protectedQueryScope } from '@/lib/protected-queries';
 import { useChoonzApi } from '@/providers/api-provider';
+import { useAuth } from '@/providers/auth-provider';
 import { AppScreen, BodyText, Panel, PanelTitle } from '@/ui/app-screen';
 import { tokens } from '@/ui/tokens';
 
 export default function CatalogScreen() {
   const api = useChoonzApi();
-  const catalog = useQuery({ queryKey: ['catalog'], queryFn: () => api.getCatalog() });
-  const engine = useQuery({ queryKey: ['catalog', 'engine'], queryFn: () => api.getEngine() });
-  const gels = useQuery({ queryKey: ['catalog', 'gels'], queryFn: () => api.getGels() });
-  const fighters = useQuery({ queryKey: ['catalog', 'fighters'], queryFn: () => api.getFighters() });
-  const stages = useQuery({ queryKey: ['catalog', 'stages'], queryFn: () => api.getStages() });
-  const kits = useQuery({ queryKey: ['catalog', 'kits'], queryFn: () => api.getKits() });
+  const auth = useAuth();
+  const queryScope = protectedQueryScope(auth.status, auth.user?.id);
+  const protectedEnabled = queryScope !== null;
+  const scope = queryScope ?? 'inactive';
+  const catalog = useQuery({
+    queryKey: protectedQueryKey(scope, 'catalog'),
+    queryFn: () => api.getCatalog(),
+    enabled: protectedEnabled,
+  });
+  const engine = useQuery({
+    queryKey: protectedQueryKey(scope, 'catalog', 'engine'),
+    queryFn: () => api.getEngine(),
+    enabled: protectedEnabled,
+  });
+  const gels = useQuery({
+    queryKey: protectedQueryKey(scope, 'catalog', 'gels'),
+    queryFn: () => api.getGels(),
+    enabled: protectedEnabled,
+  });
+  const fighters = useQuery({
+    queryKey: protectedQueryKey(scope, 'catalog', 'fighters'),
+    queryFn: () => api.getFighters(),
+    enabled: protectedEnabled,
+  });
+  const stages = useQuery({
+    queryKey: protectedQueryKey(scope, 'catalog', 'stages'),
+    queryFn: () => api.getStages(),
+    enabled: protectedEnabled,
+  });
+  const kits = useQuery({
+    queryKey: protectedQueryKey(scope, 'catalog', 'kits'),
+    queryFn: () => api.getKits(),
+    enabled: protectedEnabled,
+  });
   const queries = [catalog, engine, gels, fighters, stages, kits];
-  const failed = queries.find((query) => query.isError);
-  const pending = queries.some((query) => query.isPending);
+  const failed = protectedEnabled ? queries.find((query) => query.isError) : undefined;
+  const pending = protectedEnabled && queries.some((query) => query.isPending);
 
   return (
     <AppScreen title="CATALOG">
+      {!protectedEnabled ? (
+        <Panel>
+          <PanelTitle>AUTHENTICATION REQUIRED</PanelTitle>
+          <BodyText>Sign in on Profile to read the live catalog.</BodyText>
+        </Panel>
+      ) : null}
       {pending ? <BodyText>Loading read-only catalog…</BodyText> : null}
       {failed ? <Text style={styles.failure}>{errorMessage(failed.error)}</Text> : null}
 

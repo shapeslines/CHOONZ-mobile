@@ -1,10 +1,12 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 import { AppState, type AppStateStatus } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import type { RuntimeConfig } from '@/lib/config';
 import { ChoonzClientError } from '@/lib/errors';
 import { fixtureUser } from '@/lib/fixtures';
+import { clearProtectedQueries } from '@/lib/protected-queries';
 import {
   createChoonzSupabaseClient,
   resolvePublicSupabaseCredentials,
@@ -116,18 +118,41 @@ function LiveAuthProvider({
   children: React.ReactNode;
 }) {
   const supabase = useMemo(() => createChoonzSupabaseClient(credentials), [credentials]);
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');
+  const clearProtectedCache = useCallback(
+    () => clearProtectedQueries(queryClient),
+    [queryClient],
+  );
+
+  const clearProtectedCacheSilently = useCallback(() => {
+    void clearProtectedCache().catch(() => undefined);
+  }, [clearProtectedCache]);
 
   useEffect(() => {
     let alive = true;
-    void supabase.auth.getSession().then(({ data, error }) => {
-      if (!alive) {
-        return;
-      }
-      setSession(error ? null : data.session);
-      setStatus(error || !data.session ? 'unauthenticated' : 'authenticated');
-    });
+    void supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (!alive) {
+          return;
+        }
+        const nextSession = error ? null : data.session;
+        setSession(nextSession);
+        setStatus(nextSession ? 'authenticated' : 'unauthenticated');
+        if (!nextSession) {
+          clearProtectedCacheSilently();
+        }
+      })
+      .catch(() => {
+        if (!alive) {
+          return;
+        }
+        setSession(null);
+        setStatus('unauthenticated');
+        clearProtectedCacheSilently();
+      });
 
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!alive) {
@@ -135,6 +160,9 @@ function LiveAuthProvider({
       }
       setSession(nextSession);
       setStatus(nextSession ? 'authenticated' : 'unauthenticated');
+      if (!nextSession) {
+        clearProtectedCacheSilently();
+      }
     });
     const stopLifecycleRefresh = lifecycleRefresh(supabase);
     return () => {
@@ -142,7 +170,7 @@ function LiveAuthProvider({
       data.subscription.unsubscribe();
       stopLifecycleRefresh();
     };
-  }, [supabase]);
+  }, [clearProtectedCacheSilently, supabase]);
 
   const getAccessToken = useCallback(async () => {
     const { data, error } = await supabase.auth.getSession();
@@ -152,8 +180,15 @@ function LiveAuthProvider({
   const invalidateSession = useCallback(async () => {
     setSession(null);
     setStatus('unauthenticated');
-    await supabase.auth.signOut({ scope: 'local' });
-  }, [supabase]);
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) {
+        throw new ChoonzClientError('authentication', 'Could not complete local sign-out.');
+      }
+    } finally {
+      await clearProtectedCache();
+    }
+  }, [clearProtectedCache, supabase]);
 
   const signInWithPassword = useCallback(
     async (email: string, password: string) => {

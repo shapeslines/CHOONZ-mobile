@@ -1,4 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useMemo } from 'react';
 
 import { ChoonzApiClient } from '@/lib/api';
@@ -10,18 +9,14 @@ const ApiContext = createContext<ChoonzApiClient | null>(null);
 export function ApiProvider({ children }: { children: React.ReactNode }) {
   const config = useRuntimeConfig();
   const { getAccessToken, invalidateSession } = useAuth();
-  const queryClient = useQueryClient();
   const client = useMemo(
     () =>
       new ChoonzApiClient({
         config,
         getAccessToken,
-        onUnauthorized: async () => {
-          await invalidateSession();
-          queryClient.clear();
-        },
+        onUnauthorized: invalidateSession,
       }),
-    [config, getAccessToken, invalidateSession, queryClient],
+    [config, getAccessToken, invalidateSession],
   );
 
   return <ApiContext.Provider value={client}>{children}</ApiContext.Provider>;
