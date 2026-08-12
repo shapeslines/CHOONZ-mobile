@@ -51,7 +51,7 @@ export default function StatusScreen() {
           Select a Toon and loadout, then run the review-only P1 practice loop with confirmed CHOONZ snapshots.
         </BodyText>
         <Link href="/fight" asChild>
-          <Pressable accessibilityLabel="open-fight" accessibilityRole="button" style={styles.fightButton}>
+          <Pressable accessibilityLabel="OPEN FIGHT" accessibilityRole="button" style={styles.fightButton}>
             <Text style={styles.fightButtonText}>OPEN FIGHT</Text>
           </Pressable>
         </Link>
