@@ -40,6 +40,36 @@ This reapproval does not waive the boundary below. Every future package,
 lockfile, Jest, or CI change triggers reapproval again, as do all other listed
 conditions.
 
+## ARC677 P2 midpoint reapproval
+
+The owner responded exactly `Approved for midpoint candidate fb7fa32 and
+package SHA 09ba337c…8ac3.` No timestamp is asserted for that response. This
+consumes the package/Jest reapproval trigger only for product candidate
+`fb7fa32d0878a1da6fd614c54444e212a2319a05` (tree
+`aff32b7e61cff273ced610111e961a879e78153d`) and the proposed 1,796-byte
+`package.json` with SHA-256
+`09ba337c3ca65d94d56677f5c9d2eb28092c2041f442d828ec89afb087b38ac3`.
+
+Relative to the accepted P1 package, the sole package change broadens
+`test:screen` from the Fight rendered test to all committed
+`tests/*.test.tsx` files. The exact reviewed set is
+`connections-screen.test.tsx`, `fight-screen.test.tsx`, and
+`profile-screen.test.tsx`; all 17 rendered assertions pass. Dependencies,
+development dependencies, Node engine requirements, lifecycle behavior, and
+the installed graph are unchanged. `package-lock.json` remains SHA-256
+`fe86d80b10d5a78361c5080582df51a6616e5098d9c34b6fd8e5bbffafd5b805`,
+and application source contains no rendered-test harness import.
+
+The fresh owner-bound audit remains exactly 22 findings (15 high, 7 moderate,
+0 critical) with only GHSA-w3rx-r6r6-pgpr, GHSA-5p2g-fcmc-qvqq, and
+GHSA-w5hq-g745-h8pq as leaf advisories. The script and test additions have no
+runtime, bundle, authentication, secret, provider, production, or deployment
+effect. The original 2026-09-10-or-next-compatible-fix expiry and every
+compensating control below remain active. This approval is exhausted by the
+exact P2 candidate and package bytes above; every later package, lockfile,
+Jest, CI, audit, lifecycle, reachability, or deployment change triggers fresh
+reapproval.
+
 ## Locked rendered-test dependencies
 
 The candidate pins these packages exactly in `devDependencies` and the lockfile:

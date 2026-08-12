@@ -14,7 +14,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:screen": "jest --runInBand tests/fight-screen.test.tsx",
+    "test:screen": "jest --runInBand --testMatch \"**/tests/*.test.tsx\"",
     "expo:check": "expo config --type public",
     "expo:doctor": "expo-doctor",
     "build": "expo export --platform web --output-dir dist"
