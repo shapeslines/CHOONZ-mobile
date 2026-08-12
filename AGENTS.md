@@ -5,8 +5,11 @@ Read first. Mobile client for CHOONZ.
 ## What this is
 
 Expo Router + React Native client for the CHOONZ fighting-game backend
-(`shapeslines/CHOONZ`). The first shipped slice is intentionally read-only:
-service status, authenticated identity, and the static combat catalog.
+(`shapeslines/CHOONZ`). The shipped P1 review slice supports service status,
+authenticated identity, the static combat catalog, and one constrained
+practice-match loop. It defaults to local `fixtures` mode and can use the
+authenticated `api` mode against the backend; later mechanics and provider
+flows remain out of scope.
 
 ## Stack
 

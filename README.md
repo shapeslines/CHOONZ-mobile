@@ -7,9 +7,11 @@ Router slice includes service status, Supabase email/password sign-in, profile,
 the static roster catalog, and one constrained P1 practice-match loop. It
 consumes the **CHOONZ headless backend** over its bearer-token API.
 
-> **Status:** Expo SDK 56 review candidate. The Fight route supports only the
-> frozen P1 Toon/loadout and match lifecycle controls; OAuth/deep-link provider
-> flows, EAS linking, store submission, and P2/P3 work are excluded.
+> **Status:** P1 is landed as an Expo SDK 56 review candidate. The app defaults
+> to local `fixtures` mode and also supports authenticated `api` mode against
+> the backend. The Fight route supports only the frozen P1 Toon/loadout and
+> match lifecycle controls; OAuth/deep-link provider flows, EAS linking, store
+> submission, and P2/P3 work are excluded.
 
 ## Stack
 
