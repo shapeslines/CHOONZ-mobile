@@ -73,18 +73,20 @@ export function ConnectionsContent({
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`cancel-revoke-${connection.client_id}`}
+                    accessibilityState={{ disabled: revoking }}
                     disabled={revoking}
                     onPress={onCancelRevoke}
-                    style={styles.secondaryButton}
+                    style={[styles.secondaryButton, revoking && styles.disabledButton]}
                   >
                     <Text style={styles.secondaryButtonText}>CANCEL</Text>
                   </Pressable>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel={`confirm-revoke-${connection.client_id}`}
+                    accessibilityState={{ disabled: revoking }}
                     disabled={revoking}
                     onPress={() => onConfirmRevoke(connection.client_id)}
-                    style={styles.dangerButton}
+                    style={[styles.dangerButton, revoking && styles.disabledButton]}
                   >
                     <Text style={styles.buttonText}>{revoking ? 'REVOKING…' : 'CONFIRM'}</Text>
                   </Pressable>
@@ -94,8 +96,10 @@ export function ConnectionsContent({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`request-revoke-${connection.client_id}`}
+                accessibilityState={{ disabled: revoking }}
+                disabled={revoking}
                 onPress={() => onRequestRevoke(connection.client_id)}
-                style={styles.secondaryButton}
+                style={[styles.secondaryButton, revoking && styles.disabledButton]}
               >
                 <Text style={styles.secondaryButtonText}>REVOKE</Text>
               </Pressable>
@@ -160,6 +164,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: 8,
+  },
+  disabledButton: {
+    opacity: 0.55,
   },
   secondaryButton: {
     alignItems: 'center',
