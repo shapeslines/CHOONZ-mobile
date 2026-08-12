@@ -1,5 +1,6 @@
 import {
   decodeCatalog,
+  decodeConnections,
   decodeEngine,
   decodeFighters,
   decodeGels,
@@ -29,6 +30,7 @@ import {
 import { normalizeApiBaseUrl, type RuntimeConfig } from '@/lib/config';
 import type {
   CatalogMeta,
+  ChoonzConnection,
   ChoonzUser,
   EngineMeta,
   Fighter,
@@ -46,15 +48,19 @@ import type {
   Stage,
   Toon,
   ToonCreateInput,
+  UserUpdateInput,
 } from '@/lib/types';
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 type Decoder<T> = (value: unknown) => T;
-type HttpMethod = 'GET' | 'POST';
+type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 
 export interface ChoonzApi {
   getHealth(): Promise<Health>;
   getMe(): Promise<ChoonzUser>;
+  updateMe(input: UserUpdateInput): Promise<ChoonzUser>;
+  getConnections(): Promise<ChoonzConnection[]>;
+  revokeConnection(clientId: string): Promise<void>;
   getCatalog(): Promise<CatalogMeta>;
   getEngine(): Promise<EngineMeta>;
   getGels(): Promise<Gel[]>;
@@ -92,6 +98,8 @@ export interface ChoonzApiClientOptions {
 export class ChoonzApiClient implements ChoonzApi {
   private readonly fetcher: FetchLike;
   private readonly fixtures = new FixtureMatchService();
+  private readonly fixtureProfile: ChoonzUser = { ...fixtureUser };
+  private readonly fixtureConnections: ChoonzConnection[] = [];
 
   constructor(private readonly options: ChoonzApiClientOptions) {
     this.fetcher = options.fetcher ?? fetch;
@@ -102,7 +110,47 @@ export class ChoonzApiClient implements ChoonzApi {
   }
 
   getMe(): Promise<ChoonzUser> {
-    return this.fromMode('/me', decodeUser, fixtureUser, true);
+    return this.fromMode('/me', decodeUser, () => Promise.resolve({ ...this.fixtureProfile }), true);
+  }
+
+  updateMe(input: UserUpdateInput): Promise<ChoonzUser> {
+    return this.fromMode(
+      '/me',
+      decodeUser,
+      () => {
+        this.fixtureProfile.display_name = input.display_name ?? null;
+        return Promise.resolve({ ...this.fixtureProfile });
+      },
+      true,
+      'PATCH',
+      input,
+    );
+  }
+
+  getConnections(): Promise<ChoonzConnection[]> {
+    return this.fromMode(
+      '/me/connections',
+      decodeConnections,
+      () => Promise.resolve(this.fixtureConnections.map((connection) => ({ ...connection, scopes: [...connection.scopes] }))),
+      true,
+    );
+  }
+
+  revokeConnection(clientId: string): Promise<void> {
+    return this.fromMode(
+      `/me/connections/${encodeURIComponent(clientId)}`,
+      null,
+      () => {
+        const index = this.fixtureConnections.findIndex((connection) => connection.client_id === clientId);
+        if (index < 0) {
+          throw new ChoonzClientError('response', 'No such connection.', 404);
+        }
+        this.fixtureConnections.splice(index, 1);
+        return Promise.resolve();
+      },
+      true,
+      'DELETE',
+    );
   }
 
   getCatalog(): Promise<CatalogMeta> {
@@ -258,15 +306,17 @@ export class ChoonzApiClient implements ChoonzApi {
 
   private async fromMode<T>(
     path: string,
-    decoder: Decoder<T>,
-    fixture: T,
+    decoder: Decoder<T> | null,
+    fixture: T | (() => Promise<T>),
     requiresAuthentication: boolean,
+    method: HttpMethod = 'GET',
+    body?: unknown,
   ): Promise<T> {
     if (this.options.config.mode === 'fixtures') {
-      return fixture;
+      return typeof fixture === 'function' ? await (fixture as () => Promise<T>)() : fixture;
     }
     const config = this.requireApiConfiguration();
-    return this.request(`${config.apiBaseUrl}${path}`, decoder, requiresAuthentication);
+    return this.request(`${config.apiBaseUrl}${path}`, decoder, requiresAuthentication, method, body);
   }
 
   private requireApiConfiguration(): { apiBaseUrl: string } {
@@ -287,7 +337,7 @@ export class ChoonzApiClient implements ChoonzApi {
 
   private async request<T>(
     url: string,
-    decoder: Decoder<T>,
+    decoder: Decoder<T> | null,
     requiresAuthentication: boolean,
     method: HttpMethod = 'GET',
     body?: unknown,
@@ -330,6 +380,10 @@ export class ChoonzApiClient implements ChoonzApi {
         `CHOONZ API returned ${response.status}.`,
         response.status,
       );
+    }
+
+    if (decoder === null) {
+      return undefined as T;
     }
 
     let payload: unknown;
