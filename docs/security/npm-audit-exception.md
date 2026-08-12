@@ -121,3 +121,21 @@ and web export verification remain mandatory before any deployment authority.
   untrusted-input exposure; artifact publication; or deployment scope.
 - This record grants no production deployment, EAS build, store submission,
   live credentials, or merge authority.
+
+## Dependabot alert mapping — 2026-08-11
+
+GitHub Dependabot independently re-detected the same three leaf advisories
+accepted above as open alerts on the default branch. No new exposure: all
+three are build-chain packages (Metro image parsing; Expo config-plugin Xcode
+tooling) with no runtime reachability evidence, and the accepted boundary is
+unchanged. Alerts were dismissed with reason `tolerable_risk` referencing this
+record; dismissals auto-reopen if the dependency versions change.
+
+| Dependabot alert | GHSA / CVE | Package | First patched | Disposition |
+| --- | --- | --- | --- | --- |
+| #3 | GHSA-w3rx-r6r6-pgpr / CVE-2025-71330 | `image-size` (Metro build chain, `<= 2.0.2`) | none exists | tolerated; no fix available |
+| #2 | GHSA-5p2g-fcmc-qvqq / CVE-2025-71329 | `image-size` (Metro build chain, `<= 2.0.2`) | none exists | tolerated; no fix available |
+| #1 | GHSA-w5hq-g745-h8pq / CVE-2026-41907 | `uuid` (`xcode@3.0.1` chain, `< 11.1.1`) | 11.1.1 (unreachable without breaking Expo-pinned `uuid ^7`) | tolerated; fix requires upstream Expo release |
+
+Standing review remains the 2026-09-10 review-by date above; any package,
+lockfile, or CI change still triggers mandatory reapproval.
