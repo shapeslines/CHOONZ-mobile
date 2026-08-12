@@ -6,7 +6,7 @@ status: active
 project: choonz-mobile
 axis: post-P1 residuals — handoff, freshness, contract alignment, evidence
 opened: 2026-08-11
-updated: 2026-08-11
+updated: 2026-08-12
 closed:
 worktree: .worktrees/choonzm-slate-postp1
 branch: colony2/choonzm-slate-postp1
@@ -26,12 +26,13 @@ related: []
 
 ## State at refresh
 
-- **Tip / head:** main `6456d45` — both P1 mobile PRs merged (`#3` auth+catalog bootstrap, `#4` playable match loop). Backend fully landed: `#36` coherence, `#37` match-contract lock (OpenAPI models + `tests/test_mobile_api_contract.py`, 47 tests, non-breaking).
-- **Open PRs:** none — both repos (verified 2026-08-11).
-- **In-flight fences:** none active. Two colony worktrees (`auth-catalog-bootstrap`, `playable-match-loop`) merged, clean, in sync with origin. Claim worktree `.worktrees/choonzm-slate-postp1` on `colony2/choonzm-slate-postp1`.
+- **Tip / head:** main `9a93882` (`docs: wrap session — refresh rolling handoff to bc8625b (#7)`); P1 remains landed at mobile PRs #3/#4 and backend PRs #36/#37.
+- **Published review fences:** S2 is PR #10 (N1 freshness), S4 is PR #11 (N3 main-green), and the successor slate has N7 as PR #12; all are open drafts, unmerged, and independently verified.
+- **P2 carrier fences:** mobile PR #8 remains the typed-client carrier and PR #9 remains the recovery-guidance carrier; backend PRs #42/#43 are separate open draft inputs. None is released custody.
+- **Coordination fence:** PR #13 reconciles `slate-choonzm-next-2026-08-11.md`; this post-P1 slate remains a separate historical planning record.
 - **CI / merge gate:** CI green at merge. Package/lockfile/CI changes trigger npm-audit-exception reapproval (`docs/security/npm-audit-exception.md`) — hard fence.
-- **Vault PM state:** board row stale — `next_action` still "Review PR #37 and PR #4"; both merged 2026-08-11. P1 landing not yet recorded on master-ledger; ARC 677 P1 close pending (owner).
-- **Handoff basis:** ARC 674 handoff (`2026-08-10-handoff-arc674-choonz-coherence.md`) + `CHOONZ_Current_State.md` (vault-staging) — both superseded at the "next" step: review/merge of #36/#3 (done).
+- **Vault PM state:** the current ARC 677 handoff records P1 closed and P2 entered; exact-head custody release, board projection, and owner review gates remain separate.
+- **Handoff basis:** ARC 677 P1-close/P2-entry handoff plus `CHOONZ_Current_State.md`; the original pre-P1 queue below is reconciled only where a published receipt exists.
 
 ## Why
 
@@ -50,20 +51,20 @@ P1 landed on both repositories on 2026-08-11, but the mobile repo has never carr
 
 | ID | Slice | Gate | Done-when | Status |
 |----|--------|------|-----------|--------|
-| S1 | Rolling handoff — author `docs/next-session.md` (tip, shipped P1 capability, verification commands, DEFERRED, this slate pointer) | Agent | file exists on branch; next-session resume protocol reads it cold | queued |
-| S2 | Freshness pass — README status note + AGENTS.md "What this is" reflect shipped fixture match loop + api mode | Agent | README/AGENTS describe match-loop capability; `npm run typecheck` + `npm run lint` green | queued |
-| S3 | Match-contract alignment verification — compare `src/lib/api.ts` + match client/fixtures against backend `#37` locked contract (`tests/test_mobile_api_contract.py`), fix client drift only | Agent | diff read of `#37`; client alignment confirmed or fixes landed; tests green | queued |
-| S4 | Local main-green verification — fresh worktree clone of main: `npm ci`, `npm test`, `typecheck`, `lint`, `expo:check`, `expo:doctor`, `build` | Agent | all gates pass; receipt recorded in `docs/` | queued |
+| S1 | Rolling handoff — author `docs/next-session.md` (tip, shipped P1 capability, verification commands, DEFERRED, this slate pointer) | Agent | file exists on branch; next-session resume protocol reads it cold | landed — PR #7 |
+| S2 | Freshness pass — README status note + AGENTS.md "What this is" reflect shipped fixture match loop + api mode | Agent | README/AGENTS describe match-loop capability; `npm run typecheck` + `npm run lint` green | published — PR #10 (draft) |
+| S3 | Match-contract alignment verification — compare `src/lib/api.ts` + match client/fixtures against backend `#37` locked contract (`tests/test_mobile_api_contract.py`), fix client drift only | Agent | diff read of `#37`; client alignment confirmed or fixes landed; tests green | held — P2 client custody |
+| S4 | Local main-green verification — fresh worktree clone of main: `npm ci`, `npm test`, `typecheck`, `lint`, `expo:check`, `expo:doctor`, `build` | Agent | all gates pass; receipt recorded in `docs/` | published — PR #11 (draft) |
 | S5 | P1 landing record — master-ledger event (project `tinytoonz`, both repos landed), board `next_action` advance, ARC 677 P1 close | Owner | ledger row + board regenerated; ARC 677 P1 marked closed | blocked |
 | S6 | npm-audit-exception standing review — track review-by 2026-09-10; no package/lock/CI change without owner reapproval | Owner | reminder/flag raised; reapproval path documented | blocked |
-| S7 | P2 profile/account polish — compile only after S5 closes (G-P2-ENTRY) | Owner | G-P2-ENTRY opened; P2 slate seeded | blocked |
+| S7 | P2 profile/account polish — compile only after S5 closes (G-P2-ENTRY) | Owner | G-P2-ENTRY opened; P2 slate seeded | transitioned — ARC 677 P2 entry; custody still gated |
 
 ## Concurrency map
 
-- **Immediately, in parallel:** S1, S2, S3, S4 — disjoint fences (S1/S2 docs files differ; S3 is read-only against backend + bounded client fix; S4 runs in a throwaway worktree clone).
-- **Sequenced:** S5 → S7 (P2 entry requires ARC 677 P1 close).
-- **Owner-gated (await):** S5, S6, S7 — and any package/lockfile/CI mutation (reapproval).
-- **Ordering rule:** fire all four agent slices in parallel; S5 as soon as the owner approves; S7 only after S5.
+- **Landed/published:** S1 is landed in PR #7; S2 and S4 are separate open draft PRs #10 and #11.
+- **Held:** S3 must wait for exact P2 client custody because its `src/lib/**` surfaces overlap the typed-client carrier and profile/account worktrees.
+- **Owner-gated (await):** S5, S6, and S7 remain owner-controlled; ARC 677 P2 entry is recorded, but carrier custody and review gates are not released.
+- **Ordering rule:** do not create a second writer for S1/S2/S4 paths; owner decides S5/S6 timing; P2 implementation follows exact-head custody.
 
 ## Owner gates
 
@@ -81,7 +82,7 @@ PR + CI green (tests, lint, typecheck, expo:check, expo:doctor, web build) befor
 
 ## Recommended next
 
-**Rank-1 (ungated):** S1 — the repo has no `docs/next-session.md`, so the resume loop cannot cold-start here; it is zero-risk, establishes the dialect every later slice and session lands against, and carries the P1 landing facts forward.
+**Next safe action:** review PRs #10 and #11 while preserving their separate fences. Keep S3 held until the P2 client carrier receives exact-head custody; S5/S6/S7 remain owner-gated.
 
 ## Non-goals / residual after close
 
