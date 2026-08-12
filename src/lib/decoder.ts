@@ -1,6 +1,7 @@
 import { ResponseDecodeError } from '@/lib/errors';
 import type {
   CatalogMeta,
+  ChoonzConnection,
   ChoonzUser,
   EngineMeta,
   Fighter,
@@ -98,6 +99,14 @@ function nullableInteger(value: unknown, label: string): number | null {
   return value === null ? null : integer(value, label);
 }
 
+function isoDate(value: unknown, label: string): string {
+  const next = string(value, label);
+  if (Number.isNaN(Date.parse(next))) {
+    throw new ResponseDecodeError(`${label} must be an ISO date string.`);
+  }
+  return next;
+}
+
 function jsonValue(value: unknown, label: string): void {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') {
     return;
@@ -148,16 +157,27 @@ export function decodeHealth(value: unknown): Health {
 
 export function decodeUser(value: unknown): ChoonzUser {
   const input = record(value, 'user');
-  const createdAt = string(input.created_at, 'user.created_at');
-  if (Number.isNaN(Date.parse(createdAt))) {
-    throw new ResponseDecodeError('user.created_at must be an ISO date string.');
-  }
+  const createdAt = isoDate(input.created_at, 'user.created_at');
   return {
     id: integer(input.id, 'user.id'),
     email: nullableString(input.email, 'user.email'),
     display_name: nullableString(input.display_name, 'user.display_name'),
     created_at: createdAt,
   };
+}
+
+export function decodeConnection(value: unknown): ChoonzConnection {
+  const input = record(value, 'connection');
+  return {
+    client_id: string(input.client_id, 'connection.client_id'),
+    client_name: string(input.client_name, 'connection.client_name'),
+    scopes: stringArray(input.scopes, 'connection.scopes'),
+    created_at: isoDate(input.created_at, 'connection.created_at'),
+  };
+}
+
+export function decodeConnections(value: unknown): ChoonzConnection[] {
+  return array(value, 'connections').map(decodeConnection);
 }
 
 export function decodeGel(value: unknown): Gel {

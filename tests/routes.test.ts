@@ -9,11 +9,12 @@ const routeFiles = [
   'src/app/index.tsx',
   'src/app/catalog.tsx',
   'src/app/profile.tsx',
+  'src/app/connections.tsx',
   'src/app/fight.tsx',
 ];
 
 describe('Expo Router routes', () => {
-  it('ships the status, catalog, profile, and fight routes from src/app', () => {
+  it('ships the status, catalog, profile, connections, and fight routes from src/app', () => {
     for (const route of routeFiles) {
       expect(readFileSync(join(projectRoot, route), 'utf8')).toContain('export default');
     }
@@ -29,9 +30,20 @@ describe('Expo Router routes', () => {
 
   it('wires the Profile route to the typed backend /me reader', () => {
     const profile = readFileSync(join(projectRoot, 'src/app/profile.tsx'), 'utf8');
-    expect(profile).toContain("protectedQueryKey(queryScope ?? 'inactive', 'me')");
+    expect(profile).toContain("accountQueryKey(queryScope ?? 'inactive', 'me')");
     expect(profile).toContain('api.getMe()');
     expect(profile).toContain('enabled: queryScope !== null');
+  });
+
+  it('registers Connections as a Profile-linked route rather than global navigation', () => {
+    const layout = readFileSync(join(projectRoot, 'src/app/_layout.tsx'), 'utf8');
+    const profile = readFileSync(join(projectRoot, 'src/app/profile.tsx'), 'utf8');
+    const appScreen = readFileSync(join(projectRoot, 'src/ui/app-screen.tsx'), 'utf8');
+    const connections = readFileSync(join(projectRoot, 'src/app/connections.tsx'), 'utf8');
+    expect(layout).toContain('<Stack.Screen name="connections" />');
+    expect(profile).toContain('href="/connections"');
+    expect(appScreen).not.toContain('href="/connections"');
+    expect(connections).toContain("accountQueryKey(queryScope ?? 'inactive', 'connections')");
   });
 
   it('disables protected catalog reads without a fixture or authenticated scope', () => {
