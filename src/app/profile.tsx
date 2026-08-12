@@ -10,6 +10,17 @@ import { useAuth } from '@/providers/auth-provider';
 import { AppScreen, BodyText, Panel, PanelTitle } from '@/ui/app-screen';
 import { tokens } from '@/ui/tokens';
 
+export function AuthRecoveryGuidance() {
+  return (
+    <Panel>
+      <PanelTitle>NEED TO RECOVER ACCESS?</PanelTitle>
+      <BodyText>
+        If your session expired, sign in again. For a forgotten password, use the recovery flow from your configured auth provider. CHOONZ never asks for recovery codes or manages password resets in this screen.
+      </BodyText>
+    </Panel>
+  );
+}
+
 export default function ProfileScreen() {
   const api = useChoonzApi();
   const auth = useAuth();
@@ -81,36 +92,39 @@ export default function ProfileScreen() {
       ) : null}
 
       {auth.status === 'unauthenticated' ? (
-        <Panel>
-          <PanelTitle>EMAIL + PASSWORD</PanelTitle>
-          <BodyText>Use the shared CHOONZ Supabase account. OAuth flows are not in this slice.</BodyText>
-          <TextInput
-            accessibilityLabel="email"
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            placeholderTextColor={tokens.muted}
-            style={styles.input}
-            value={email}
-          />
-          <TextInput
-            accessibilityLabel="password"
-            autoCapitalize="none"
-            autoComplete="current-password"
-            onChangeText={setPassword}
-            placeholder="Password"
-            placeholderTextColor={tokens.muted}
-            secureTextEntry
-            style={styles.input}
-            value={password}
-          />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Pressable disabled={submitting} onPress={() => void signIn()} style={styles.button}>
-            <Text style={styles.buttonText}>{submitting ? 'SIGNING IN…' : 'SIGN IN'}</Text>
-          </Pressable>
-        </Panel>
+        <>
+          <Panel>
+            <PanelTitle>EMAIL + PASSWORD</PanelTitle>
+            <BodyText>Sign in with the CHOONZ account configured for this build. OAuth flows are not in this slice.</BodyText>
+            <TextInput
+              accessibilityLabel="email"
+              autoCapitalize="none"
+              autoComplete="email"
+              keyboardType="email-address"
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              placeholderTextColor={tokens.muted}
+              style={styles.input}
+              value={email}
+            />
+            <TextInput
+              accessibilityLabel="password"
+              autoCapitalize="none"
+              autoComplete="current-password"
+              onChangeText={setPassword}
+              placeholder="Password"
+              placeholderTextColor={tokens.muted}
+              secureTextEntry
+              style={styles.input}
+              value={password}
+            />
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            <Pressable disabled={submitting} onPress={() => void signIn()} style={styles.button}>
+              <Text style={styles.buttonText}>{submitting ? 'SIGNING IN…' : 'SIGN IN'}</Text>
+            </Pressable>
+          </Panel>
+          <AuthRecoveryGuidance />
+        </>
       ) : null}
     </AppScreen>
   );
