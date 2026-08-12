@@ -1,35 +1,36 @@
 # CHOONZ-mobile — next session
 
-## State @ `6456d45` · 2026-08-11 · doton/opencode
-P1 fully landed on both repos — backend `#36`/`#37` and mobile `#3`/`#4` all merged
-2026-08-11, zero open PRs. App: Expo SDK 56 / RN 0.85 / React 19, fixtures-default
-with `api` mode; auth + read-only catalog + playable fixture match loop. PR #5
-(post-P1 slate + dependabot mapping addendum) open, CI pending.
+## State @ `bc8625b` · 2026-08-11 · doton/opencode (session wrapped)
+P1 fully landed on both repos — backend `#36`/`#37`, mobile `#3`/`#4`. All planning
+docs merged: post-P1 slate, dependabot mapping addendum, rolling handoff, next-wave
+slate. Repo clean on main; claim worktrees removed. Escalated wrap handoff recorded
+in vault Exchange (`2026-08-11-handoff-choonz-mobile-session-wrap-escalated`).
 
 ## Shipped
-- `6456d45` P1: auth + catalog bootstrap (#3) and playable match loop (#4)
-- PR #5 `colony2/choonzm-slate-postp1`: `docs/slate-choonzm-postp1-2026-08-11.md` +
-  dependabot alert mapping in `docs/security/npm-audit-exception.md`
+- `bc8625b` PR #5 (post-P1 slate + dependabot addendum) and PR #6 (S1 handoff +
+  next-wave slate) merged; main synced; merged branches + worktrees removed
+- Dependabot alerts #1–#3 dismissed (`tolerable_risk`, exception-doc reference)
 
 ## Signals
-- **state/flags:** dependabot alerts #1–#3 dismissed (`tolerable_risk`, exception-doc
-  reference); npm-audit-exception review-by **2026-09-10**; any package/lock/CI change
-  requires owner reapproval; web export is validation-only (no deploy without CSP +
-  third-party-script review)
-- **communicated:** none pending
-- **raised for /custodian:** none yet — README/AGENTS freshness is S2's own lane
-- **FOR /brain:** brain/choonz-mobile.md ← choonz-mobile@`6456d45`: P1 shipped
-  capabilities, mode contract (`fixtures|api`), gate battery commands, audit-exception
-  boundary, P2 entry gating
-- **DEFERRED / unresolved:** PR #5 merge (CI pending); S5 board advance + ARC 677 P1
-  close (owner); S6 2026-09-10 review (owner); S7 P2 entry (owner); S3 match-contract
-  alignment vs backend #37 (queued, agent)
+- **state/flags:** npm-audit-exception review-by **2026-09-10**; any
+  package/lock/CI change requires owner reapproval; web export validation-only (no
+  deploy without CSP + third-party-script review)
+- **communicated:** fence declaration broadcast for CHOONZ-mobile docs lane
+- **raised for /custodian:** none — README/AGENTS freshness is N1's own lane
+- **FOR /brain:** brain/choonz-mobile.md ← choonz-mobile@`bc8625b`: P1 shipped
+  capability, mode contract (`fixtures|api`), gate battery, audit-exception
+  boundary, slate chain (postp1 → next), P2 gating
+- **DEFERRED / unresolved:** N4 board advance + ARC 677 P1 close (owner) · N5
+  2026-09-10 review (owner) · N6 P2 entry (owner — peer session
+  `opencode-choonz-p2-slate` logged tinytoonz activity at ledger 1611/1613;
+  confirm ownership before firing) · N2 contract alignment, N3 green verification,
+  N7 CSP prep (agent, queued)
 
 ## Next — FIRST action
-1. Land PR #5, then run S2 freshness pass (README/AGENTS) per
-   `docs/slate-choonzm-postp1-2026-08-11.md`
+1. Fire **N1** (S2 freshness pass — README/AGENTS) per
+   `docs/slate-choonzm-next-2026-08-11.md`; then N2, N3, N7 in parallel
 
 ## Queue
-- S2 freshness pass → S3 contract alignment → S4 local main-green verification
-  (fence-disjoint, parallel-fireable, agent)
-- S5–S7 owner gates → follow-on: `docs/slate-choonzm-next-2026-08-11.md`
+- N1 → N2 → N3 → N7 (agent, fence-disjoint, parallel-fireable)
+- N4 → N6 (owner; P2 entry after ARC 677 P1 close) · N5 (2026-09-10) · N8
+  (upstream-fix upgrade, owner)
