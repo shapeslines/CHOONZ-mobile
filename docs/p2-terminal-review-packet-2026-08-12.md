@@ -2,9 +2,10 @@
 
 ## Terminal verdict
 
-`PASS` for the evidence packet. Phase custody remains `CONDITIONAL` because
-owner review and any merge decision are still open. This receipt synthesizes
-the existing review evidence; it does not modify, merge, or release any carrier.
+`CONDITIONAL`: the evidence packet is assembled, but terminal acceptance remains
+pending formal independent/owner review. Phase custody and any merge decision
+are still open. This receipt synthesizes the existing review evidence; it does
+not modify, merge, or release any carrier.
 
 ## Exact review heads
 
@@ -16,6 +17,15 @@ the existing review evidence; it does not modify, merge, or release any carrier.
 The workflow-run API is the source for the remote results above. The commit
 status-context API returned no contexts for these heads, so this packet does
 not claim a separate combined-status rollup.
+
+## Independent acceptance gate
+
+The fresh independent verifier returned `CONDITIONAL`. The exact heads and
+remote workflows are green, but live PRs #15 and #45 have no formal review
+decision, review, or review-comment record. The review-only receipts #16â€“#19
+also do not provide that formal acceptance. This packet therefore records the
+complete evidence chain without claiming that the paired P2 review has been
+accepted; that owner/reviewer gate remains outstanding.
 
 ## Evidence chain
 
