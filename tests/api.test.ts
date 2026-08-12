@@ -114,10 +114,61 @@ describe('CHOONZ API client', () => {
       display_name: 'Practice Fighter',
     });
     await expect(client.getMe()).resolves.toMatchObject({ display_name: 'Practice Fighter' });
+    await expect(client.getConnections()).resolves.toMatchObject([
+      { client_id: 'fixture-scoreboard', client_name: 'Fixture Scoreboard' },
+    ]);
+    await expect(client.revokeConnection('fixture-scoreboard')).resolves.toBeUndefined();
     await expect(client.getConnections()).resolves.toEqual([]);
     await expect(client.revokeConnection('missing')).rejects.toMatchObject({ status: 404 });
     expect(tokenReads).toBe(0);
     expect(fetches).toBe(0);
+  });
+
+  it('requires the revoke endpoint to return exactly 204', async () => {
+    const client = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'access-token',
+      fetcher: async () => Response.json({ ok: true }),
+    });
+
+    await expect(client.revokeConnection('cool-game')).rejects.toMatchObject({
+      kind: 'response',
+      status: 200,
+    });
+  });
+
+  it.each([403, 404, 422])('preserves exact account error status %i', async (status) => {
+    const client = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'access-token',
+      fetcher: async () => new Response(null, { status }),
+    });
+
+    await expect(client.updateMe({ display_name: 'Still Local' })).rejects.toMatchObject({
+      kind: 'response',
+      status,
+    });
+  });
+
+  it('rejects malformed account responses and reports network failures', async () => {
+    const malformed = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'access-token',
+      fetcher: async () => Response.json({ display_name: 'missing required fields' }),
+    });
+    const offline = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'access-token',
+      fetcher: async () => {
+        throw new Error('offline');
+      },
+    });
+
+    await expect(malformed.updateMe({ display_name: null })).rejects.toMatchObject({
+      kind: 'response',
+    });
+    await expect(malformed.getConnections()).rejects.toMatchObject({ kind: 'response' });
+    await expect(offline.getConnections()).rejects.toMatchObject({ kind: 'network' });
   });
 
   it('invalidates the local session when the API returns 401', async () => {

@@ -55,6 +55,15 @@ export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 type Decoder<T> = (value: unknown) => T;
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 
+const fixtureAccountConnections: ChoonzConnection[] = [
+  {
+    client_id: 'fixture-scoreboard',
+    client_name: 'Fixture Scoreboard',
+    scopes: ['profile:read', 'matches:read'],
+    created_at: '2026-08-10T00:00:00Z',
+  },
+];
+
 export interface ChoonzApi {
   getHealth(): Promise<Health>;
   getMe(): Promise<ChoonzUser>;
@@ -99,7 +108,10 @@ export class ChoonzApiClient implements ChoonzApi {
   private readonly fetcher: FetchLike;
   private readonly fixtures = new FixtureMatchService();
   private readonly fixtureProfile: ChoonzUser = { ...fixtureUser };
-  private readonly fixtureConnections: ChoonzConnection[] = [];
+  private readonly fixtureConnections = fixtureAccountConnections.map((connection) => ({
+    ...connection,
+    scopes: [...connection.scopes],
+  }));
 
   constructor(private readonly options: ChoonzApiClientOptions) {
     this.fetcher = options.fetcher ?? fetch;
@@ -131,7 +143,13 @@ export class ChoonzApiClient implements ChoonzApi {
     return this.fromMode(
       '/me/connections',
       decodeConnections,
-      () => Promise.resolve(this.fixtureConnections.map((connection) => ({ ...connection, scopes: [...connection.scopes] }))),
+      () =>
+        Promise.resolve(
+          this.fixtureConnections.map((connection) => ({
+            ...connection,
+            scopes: [...connection.scopes],
+          })),
+        ),
       true,
     );
   }
@@ -150,6 +168,8 @@ export class ChoonzApiClient implements ChoonzApi {
       },
       true,
       'DELETE',
+      undefined,
+      204,
     );
   }
 
@@ -311,12 +331,20 @@ export class ChoonzApiClient implements ChoonzApi {
     requiresAuthentication: boolean,
     method: HttpMethod = 'GET',
     body?: unknown,
+    expectedStatus?: number,
   ): Promise<T> {
     if (this.options.config.mode === 'fixtures') {
       return typeof fixture === 'function' ? await (fixture as () => Promise<T>)() : fixture;
     }
     const config = this.requireApiConfiguration();
-    return this.request(`${config.apiBaseUrl}${path}`, decoder, requiresAuthentication, method, body);
+    return this.request(
+      `${config.apiBaseUrl}${path}`,
+      decoder,
+      requiresAuthentication,
+      method,
+      body,
+      expectedStatus,
+    );
   }
 
   private requireApiConfiguration(): { apiBaseUrl: string } {
@@ -341,6 +369,7 @@ export class ChoonzApiClient implements ChoonzApi {
     requiresAuthentication: boolean,
     method: HttpMethod = 'GET',
     body?: unknown,
+    expectedStatus?: number,
   ): Promise<T> {
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (body !== undefined) {
@@ -378,6 +407,14 @@ export class ChoonzApiClient implements ChoonzApi {
       throw new ChoonzClientError(
         'response',
         `CHOONZ API returned ${response.status}.`,
+        response.status,
+      );
+    }
+
+    if (expectedStatus !== undefined && response.status !== expectedStatus) {
+      throw new ChoonzClientError(
+        'response',
+        `CHOONZ API returned ${response.status}; expected ${expectedStatus}.`,
         response.status,
       );
     }

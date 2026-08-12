@@ -13,7 +13,7 @@ export interface ChoonzUser {
 }
 
 export interface UserUpdateInput {
-  display_name?: string | null;
+  display_name: string | null;
 }
 
 export interface ChoonzConnection {

@@ -16,6 +16,13 @@ export function protectedQueryKey(scope: string, ...resource: string[]): readonl
   return [...PROTECTED_QUERY_PREFIX, scope, ...resource];
 }
 
+export function accountQueryKey(
+  scope: string,
+  resource: 'me' | 'connections',
+): readonly string[] {
+  return protectedQueryKey(scope, resource);
+}
+
 export function fightQueryKey(scope: string, ...resource: string[]): readonly string[] {
   return protectedQueryKey(scope, 'fight', ...resource);
 }
