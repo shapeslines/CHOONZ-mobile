@@ -12,6 +12,17 @@ export interface ChoonzUser {
   created_at: string;
 }
 
+export interface UserUpdateInput {
+  display_name?: string | null;
+}
+
+export interface ChoonzConnection {
+  client_id: string;
+  client_name: string;
+  scopes: string[];
+  created_at: string;
+}
+
 export interface Gel {
   id: string;
   hot: string;

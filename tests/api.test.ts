@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ChoonzApiClient } from '../src/lib/api';
 import { resolveAppConfig } from '../src/lib/config';
-import { decodeHealth, decodeKits } from '../src/lib/decoder';
+import { decodeConnection, decodeHealth, decodeKits } from '../src/lib/decoder';
 import { ResponseDecodeError } from '../src/lib/errors';
 
 const apiConfig = resolveAppConfig(
@@ -32,6 +32,92 @@ describe('CHOONZ API client', () => {
 
     await expect(client.getMe()).resolves.toMatchObject({ id: 7 });
     expect(receivedHeaders).toMatchObject({ Authorization: 'Bearer access-token' });
+  });
+
+  it('updates the profile through the typed PATCH contract', async () => {
+    let receivedInput = '';
+    let receivedInit: RequestInit | undefined;
+    const client = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'access-token',
+      fetcher: async (input, init) => {
+        receivedInput = input;
+        receivedInit = init;
+        return Response.json({
+          id: 7,
+          email: 'fighter@choonz.example',
+          display_name: 'Updated Fighter',
+          created_at: '2026-08-10T00:00:00Z',
+        });
+      },
+    });
+
+    await expect(client.updateMe({ display_name: 'Updated Fighter' })).resolves.toMatchObject({
+      display_name: 'Updated Fighter',
+    });
+    expect(receivedInput).toBe('https://api.choonz.example/me');
+    expect(receivedInit?.method).toBe('PATCH');
+    expect(JSON.parse(String(receivedInit?.body))).toEqual({ display_name: 'Updated Fighter' });
+  });
+
+  it('decodes connection lists and revokes a URL-encoded client id without reading a body', async () => {
+    const requests: { input: string; init?: RequestInit }[] = [];
+    const client = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'access-token',
+      fetcher: async (input, init) => {
+        requests.push({ input, init });
+        if (init?.method === 'DELETE') {
+          return new Response(null, { status: 204 });
+        }
+        return Response.json([
+          {
+            client_id: 'cool-game',
+            client_name: 'Cool Game',
+            scopes: ['profile:read'],
+            created_at: '2026-08-10T00:00:00Z',
+          },
+        ]);
+      },
+    });
+
+    await expect(client.getConnections()).resolves.toEqual([
+      {
+        client_id: 'cool-game',
+        client_name: 'Cool Game',
+        scopes: ['profile:read'],
+        created_at: '2026-08-10T00:00:00Z',
+      },
+    ]);
+    await expect(client.revokeConnection('cool game/1')).resolves.toBeUndefined();
+    expect(requests[1]?.input).toBe('https://api.choonz.example/me/connections/cool%20game%2F1');
+    expect(requests[1]?.init?.method).toBe('DELETE');
+    expect(requests[1]?.init?.headers).toMatchObject({ Authorization: 'Bearer access-token' });
+  });
+
+  it('keeps profile mutations fixture-local and never reads a live token or URL', async () => {
+    let tokenReads = 0;
+    let fetches = 0;
+    const client = new ChoonzApiClient({
+      config: resolveAppConfig({ EXPO_PUBLIC_CHOONZ_MODE: 'fixtures' }, false),
+      getAccessToken: async () => {
+        tokenReads += 1;
+        return 'should-not-be-read';
+      },
+      fetcher: async () => {
+        fetches += 1;
+        return Response.json({});
+      },
+    });
+
+    await expect(client.updateMe({ display_name: 'Practice Fighter' })).resolves.toMatchObject({
+      display_name: 'Practice Fighter',
+    });
+    await expect(client.getMe()).resolves.toMatchObject({ display_name: 'Practice Fighter' });
+    await expect(client.getConnections()).resolves.toEqual([]);
+    await expect(client.revokeConnection('missing')).rejects.toMatchObject({ status: 404 });
+    expect(tokenReads).toBe(0);
+    expect(fetches).toBe(0);
   });
 
   it('invalidates the local session when the API returns 401', async () => {
@@ -79,5 +165,13 @@ describe('CHOONZ API client', () => {
     expect(() => decodeKits([{ fighter_id: 'AXEL', moves: 'not-an-array' }])).toThrow(
       ResponseDecodeError,
     );
+    expect(() =>
+      decodeConnection({
+        client_id: 'cool-game',
+        client_name: 'Cool Game',
+        scopes: ['profile:read'],
+        created_at: 'not-a-date',
+      }),
+    ).toThrow(ResponseDecodeError);
   });
 });
