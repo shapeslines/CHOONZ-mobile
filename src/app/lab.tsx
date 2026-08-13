@@ -114,10 +114,11 @@ export function LabContent({
         </BodyText>
         {scenarios ? (
           <BodyText>
-            Corpus {scenarios.corpus_version} · engine {scenarios.engine_revision} · hash{' '}
-            {scenarios.corpus_hash.slice(0, 12)}…
+            schema {scenarios.schema_version} · corpus {scenarios.corpus_version} · engine{' '}
+            {scenarios.engine_revision}
           </BodyText>
         ) : null}
+        {scenarios ? <BodyText>corpus hash {scenarios.corpus_hash}</BodyText> : null}
       </Panel>
 
       {scenariosPending ? <BodyText>Loading scenarios…</BodyText> : null}
@@ -211,6 +212,25 @@ export function LabContent({
             seed {receipt.normalized_inputs.seed} · {receipt.normalized_inputs.p1_fighter_id} vs{' '}
             {receipt.normalized_inputs.p2_fighter_id} · stage {receipt.normalized_inputs.stage_id}
           </BodyText>
+          <BodyText>
+            gels {receipt.normalized_inputs.p1_gel}/{receipt.normalized_inputs.p2_gel} · tape{' '}
+            {receipt.normalized_inputs.input_tape.length === 0
+              ? 'empty'
+              : receipt.normalized_inputs.input_tape
+                  .map((event) => `${event.side}:${event.action}@${event.step}`)
+                  .join(', ')}
+          </BodyText>
+          <View style={styles.diffs}>
+            {receipt.normalized_inputs.checkpoints.map((step) => {
+              const key = String(step);
+              return (
+                <Text key={key} style={styles.diffLine}>
+                  step {key}: actual {JSON.stringify(receipt.actual_checkpoints[key] ?? null)} ·{' '}
+                  expected {JSON.stringify(receipt.expected_checkpoints[key] ?? null)}
+                </Text>
+              );
+            })}
+          </View>
           {receipt.diffs.length > 0 ? (
             <View style={styles.diffs}>
               {receipt.diffs.map((diff) => (

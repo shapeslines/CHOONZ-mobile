@@ -56,8 +56,14 @@ function receipt(overrides: Partial<MechanicsReplayReceipt> = {}): MechanicsRepl
       input_tape: [],
       checkpoints: [0, 12, 32, 44, 60, 98, 127],
     },
-    actual_checkpoints: {},
-    expected_checkpoints: {},
+    actual_checkpoints: {
+      '0': { step: 0, bar: 0, p1: { hp: 0.78, meter: 0.24, rounds: 1 }, p2: { hp: 0.9, meter: 0.32, rounds: 0 }, timer: 60, combo: 0 },
+      '12': { step: 12, bar: 0, p1: { hp: 0.78, meter: 0.24, rounds: 1 }, p2: { hp: 0.9, meter: 0.32, rounds: 0 }, timer: 60, combo: 0 },
+    },
+    expected_checkpoints: {
+      '0': { step: 0, bar: 0, p1: { hp: 0.78, meter: 0.24, rounds: 1 }, p2: { hp: 0.9, meter: 0.32, rounds: 0 }, timer: 60, combo: 0 },
+      '12': { step: 12, bar: 0, p1: { hp: 0.78, meter: 0.24, rounds: 1 }, p2: { hp: 0.9, meter: 0.32, rounds: 0 }, timer: 60, combo: 0 },
+    },
     diffs: [],
     verdict: 'pass',
     ...overrides,
@@ -163,6 +169,21 @@ describe('LabContent rendered states', () => {
     expect(view.getByText('FAIL')).toBeTruthy();
     expect(view.getByText('checkpoints.44.p1.hp: expected 0.7 → actual 0.76')).toBeTruthy();
     expect(view.getByText('checkpoints.2.timer: expected 59 → actual 60')).toBeTruthy();
+  });
+
+  it('renders complete corpus identity and per-checkpoint actual/expected projections', async () => {
+    const props = propsFor({
+      selectedScenarioId: 'seed0-classic',
+      receipt: receipt(),
+    });
+    const view = await render(<LabContent {...props} />);
+
+    expect(view.getByText('schema 1.0 · corpus 1 · engine 1')).toBeTruthy();
+    expect(
+      view.getByText('corpus hash 66bb04718599049f78be740df497de4e118cee123bd47f6941513035ce0d23be'),
+    ).toBeTruthy();
+    expect(view.getByText(/step 0: actual .* expected /)).toBeTruthy();
+    expect(view.getByText('gels sodium/blue · tape empty')).toBeTruthy();
   });
 
   it('marks overridden receipts NOT APPLICABLE even with empty diffs', async () => {
