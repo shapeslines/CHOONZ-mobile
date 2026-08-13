@@ -1,0 +1,202 @@
+import { fireEvent, render } from '@testing-library/react-native';
+import { describe, expect, it, jest } from '@jest/globals';
+
+import { LabContent, type LabContentProps } from '../src/app/lab';
+import type {
+  MechanicsReplayReceipt,
+  MechanicsScenarioList,
+} from '../src/lib/types';
+
+const scenarios: MechanicsScenarioList = {
+  schema_version: '1.0',
+  corpus_version: '1',
+  corpus_hash: '66bb04718599049f78be740df497de4e118cee123bd47f6941513035ce0d23be',
+  engine_revision: '1',
+  scenarios: [
+    {
+      id: 'seed0-classic',
+      title: 'Classic opening bars (seed 0)',
+      description: 'The unchanged AHFight scripted loop.',
+      tags: ['golden'],
+      seed: 0,
+      fighters: { p1: 'AXEL', p2: 'VEX' },
+      gels: { p1: 'sodium', p2: 'blue' },
+      stage_id: 'rooftop',
+      checkpoint_count: 7,
+    },
+    {
+      id: 'rex-pressure-tape',
+      title: 'REX pressure with scripted input tape',
+      description: 'REX vs NYX with an ordered input tape.',
+      tags: ['input-tape'],
+      seed: 7,
+      fighters: { p1: 'REX', p2: 'NYX' },
+      gels: { p1: 'acid', p2: 'uv' },
+      stage_id: 'warehouse',
+      checkpoint_count: 6,
+    },
+  ],
+};
+
+function receipt(overrides: Partial<MechanicsReplayReceipt> = {}): MechanicsReplayReceipt {
+  return {
+    schema_version: '1.0',
+    corpus_version: '1',
+    corpus_hash: '66bb04718599049f78be740df497de4e118cee123bd47f6941513035ce0d23be',
+    engine_revision: '1',
+    scenario_id: 'seed0-classic',
+    overridden: false,
+    normalized_inputs: {
+      seed: 0,
+      p1_fighter_id: 'AXEL',
+      p2_fighter_id: 'VEX',
+      p1_gel: 'sodium',
+      p2_gel: 'blue',
+      stage_id: 'rooftop',
+      input_tape: [],
+      checkpoints: [0, 12, 32, 44, 60, 98, 127],
+    },
+    actual_checkpoints: {},
+    expected_checkpoints: {},
+    diffs: [],
+    verdict: 'pass',
+    ...overrides,
+  };
+}
+
+function propsFor(overrides: Partial<LabContentProps> = {}): LabContentProps {
+  return {
+    access: 'eligible',
+    scenarios,
+    scenariosPending: false,
+    scenariosError: null,
+    selectedScenarioId: null,
+    onSelectScenario: jest.fn(),
+    receipt: null,
+    replayPending: false,
+    replayError: null,
+    onRunGolden: jest.fn(),
+    onRunOverride: jest.fn(),
+    ...overrides,
+  };
+}
+
+describe('LabContent rendered states', () => {
+  it('fails closed in disabled builds with no scenario controls', async () => {
+    const view = await render(<LabContent {...propsFor({ access: 'disabled' })} />);
+
+    expect(view.getByText('MECHANICS LAB UNAVAILABLE')).toBeTruthy();
+    expect(view.queryByRole('button', { name: 'lab-run-golden' })).toBeNull();
+    expect(view.queryByRole('button', { name: 'lab-select-seed0-classic' })).toBeNull();
+  });
+
+  it('renders API mode required in fixture mode with zero replay observation', async () => {
+    const props = propsFor({ access: 'fixture-required', scenarios: null });
+    const view = await render(<LabContent {...props} />);
+
+    expect(view.getByText('API MODE REQUIRED')).toBeTruthy();
+    expect(view.queryByRole('button', { name: 'lab-run-golden' })).toBeNull();
+    expect(props.onRunGolden).not.toHaveBeenCalled();
+  });
+
+  it('fails closed while unauthenticated and while the session loads', async () => {
+    const unauthenticated = await render(<LabContent {...propsFor({ access: 'auth-required', scenarios: null })} />);
+    expect(unauthenticated.getByText('AUTHENTICATION REQUIRED')).toBeTruthy();
+    expect(unauthenticated.queryByRole('button', { name: 'lab-run-golden' })).toBeNull();
+
+    const loading = await render(<LabContent {...propsFor({ access: 'loading', scenarios: null })} />);
+    expect(loading.getByText('Loading session…')).toBeTruthy();
+    expect(loading.queryByRole('button', { name: 'lab-run-golden' })).toBeNull();
+  });
+
+  it('lists selectable scenarios and runs the unchanged golden', async () => {
+    const props = propsFor();
+    const view = await render(<LabContent {...props} />);
+
+    expect(view.getByRole('button', { name: 'lab-select-seed0-classic' })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'lab-select-rex-pressure-tape' })).toBeTruthy();
+    expect(view.queryByRole('button', { name: 'lab-run-golden' })).toBeNull();
+
+    await fireEvent.press(view.getByRole('button', { name: 'lab-select-rex-pressure-tape' }));
+    expect(props.onSelectScenario).toHaveBeenCalledWith('rex-pressure-tape');
+  });
+
+  it('shows replay controls for a selected scenario and forwards the golden run', async () => {
+    const props = propsFor({ selectedScenarioId: 'seed0-classic' });
+    const view = await render(<LabContent {...props} />);
+
+    await fireEvent.press(view.getByRole('button', { name: 'lab-run-golden' }));
+    expect(props.onRunGolden).toHaveBeenCalledTimes(1);
+    expect(
+      view.getByRole('button', { name: 'lab-run-override' }).props.accessibilityState.disabled,
+    ).toBe(true);
+  });
+
+  it('sends a bounded seed override and never a non-integer', async () => {
+    const props = propsFor({ selectedScenarioId: 'seed0-classic' });
+    const view = await render(<LabContent {...props} />);
+
+    await fireEvent.changeText(view.getByLabelText('lab-override-seed'), '42');
+    const overrideButton = view.getByRole('button', { name: 'lab-run-override' });
+    expect(overrideButton.props.accessibilityState.disabled).toBe(false);
+    await fireEvent.press(overrideButton);
+    expect(props.onRunOverride).toHaveBeenCalledWith({ seed: 42 });
+
+    await fireEvent.changeText(view.getByLabelText('lab-override-seed'), '4.5');
+    await fireEvent.press(view.getByRole('button', { name: 'lab-run-override' }));
+    expect(props.onRunOverride).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the server verdict and diffs in the returned order without recomputation', async () => {
+    const props = propsFor({
+      selectedScenarioId: 'seed0-classic',
+      receipt: receipt({
+        verdict: 'fail',
+        diffs: [
+          { path: 'checkpoints.44.p1.hp', expected: 0.7, actual: 0.76 },
+          { path: 'checkpoints.2.timer', expected: 59, actual: 60 },
+        ],
+      }),
+    });
+    const view = await render(<LabContent {...props} />);
+
+    expect(view.getByText('FAIL')).toBeTruthy();
+    expect(view.getByText('checkpoints.44.p1.hp: expected 0.7 → actual 0.76')).toBeTruthy();
+    expect(view.getByText('checkpoints.2.timer: expected 59 → actual 60')).toBeTruthy();
+  });
+
+  it('marks overridden receipts NOT APPLICABLE even with empty diffs', async () => {
+    const props = propsFor({
+      selectedScenarioId: 'seed0-classic',
+      receipt: receipt({ overridden: true, verdict: 'not_applicable' }),
+    });
+    const view = await render(<LabContent {...props} />);
+
+    expect(view.getByText('NOT_APPLICABLE · OVERRIDDEN')).toBeTruthy();
+  });
+
+  it('disables replay while pending and surfaces replay errors', async () => {
+    const pending = await render(
+      <LabContent {...propsFor({ selectedScenarioId: 'seed0-classic', replayPending: true })} />,
+    );
+    expect(pending.getByText('Replaying through the backend engine…')).toBeTruthy();
+    expect(
+      pending.getByRole('button', { name: 'lab-run-golden' }).props.accessibilityState.disabled,
+    ).toBe(true);
+
+    const errored = await render(
+      <LabContent
+        {...propsFor({ selectedScenarioId: 'seed0-classic', replayError: 'CHOONZ API returned 404.' })}
+      />,
+    );
+    expect(errored.getByText('CHOONZ API returned 404.')).toBeTruthy();
+  });
+
+  it('surfaces scenario list errors without exposing controls', async () => {
+    const view = await render(
+      <LabContent {...propsFor({ scenarios: null, scenariosError: 'CHOONZ API returned 401.' })} />,
+    );
+    expect(view.getByText('CHOONZ API returned 401.')).toBeTruthy();
+    expect(view.queryByRole('button', { name: 'lab-select-seed0-classic' })).toBeNull();
+  });
+});

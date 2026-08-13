@@ -11,6 +11,7 @@ const routeFiles = [
   'src/app/profile.tsx',
   'src/app/connections.tsx',
   'src/app/fight.tsx',
+  'src/app/lab.tsx',
 ];
 
 describe('Expo Router routes', () => {
@@ -64,5 +65,19 @@ describe('Expo Router routes', () => {
     expect(fight).toContain('useFight');
     expect(fight).toContain('<AppScreen title="FIGHT / PRACTICE LOOP">');
     expect(fight).not.toContain('@react-navigation/');
+  });
+
+  it('registers the hidden Lab route with no global or production-facing link', () => {
+    const layout = readFileSync(join(projectRoot, 'src/app/_layout.tsx'), 'utf8');
+    const appScreen = readFileSync(join(projectRoot, 'src/ui/app-screen.tsx'), 'utf8');
+    const home = readFileSync(join(projectRoot, 'src/app/index.tsx'), 'utf8');
+    const lab = readFileSync(join(projectRoot, 'src/app/lab.tsx'), 'utf8');
+    expect(layout).toContain('<Stack.Screen name="lab" />');
+    expect(appScreen).not.toContain('href="/lab"');
+    expect(home).not.toContain('href="/lab"');
+    expect(lab).toContain('export function LabContent');
+    expect(lab).toContain('mechanicsQueryKey');
+    expect(lab).toContain('api.replayMechanics');
+    expect(lab).not.toContain('@react-navigation/');
   });
 });
