@@ -11,6 +11,13 @@ const connection: ChoonzConnection = {
   created_at: '2026-08-10T00:00:00Z',
 };
 
+const secondConnection: ChoonzConnection = {
+  client_id: 'analytics',
+  client_name: 'Analytics',
+  scopes: ['profile:read'],
+  created_at: '2026-08-09T00:00:00Z',
+};
+
 function props(overrides = {}) {
   return {
     fixture: false,
@@ -48,6 +55,21 @@ describe('ConnectionsContent', () => {
       confirmingView.getByRole('button', { name: 'confirm-revoke-scoreboard' }),
     );
     expect(confirming.onConfirmRevoke).toHaveBeenCalledWith('scoreboard');
+  });
+
+  it('disables other revoke actions while a revocation is pending', async () => {
+    const view = await render(
+      <ConnectionsContent
+        {...props({
+          data: [connection, secondConnection],
+          confirmingClientId: connection.client_id,
+          revoking: true,
+        })}
+      />,
+    );
+
+    const otherRevoke = view.getByRole('button', { name: 'request-revoke-analytics' });
+    expect(otherRevoke.props.accessibilityState.disabled).toBe(true);
   });
 
   it('preserves confirmed rows while an error is displayed', async () => {
