@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { fixtureDataLabel, normalizeApiBaseUrl, resolveAppConfig } from '../src/lib/config';
+import {
+  fixtureDataLabel,
+  normalizeApiBaseUrl,
+  resolveAppConfig,
+  resolveMechanicsLabEnabled,
+} from '../src/lib/config';
 import {
   isLegacyAnonJwt,
   resolvePublicSupabaseCredentials,
@@ -147,6 +152,90 @@ describe('CHOONZ public runtime configuration', () => {
         ),
       ),
     ).toBeNull();
+  });
+
+  it('resolves the mechanics lab flag only for eligible non-production API builds', () => {
+    const devApiEnv = {
+      EXPO_PUBLIC_CHOONZ_MODE: 'api',
+      EXPO_PUBLIC_CHOONZ_API_BASE_URL: 'https://api.choonz.example',
+    };
+    expect(
+      resolveMechanicsLabEnabled(
+        { ...devApiEnv, EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB: 'true' },
+        false,
+        'api',
+      ),
+    ).toBe(true);
+    expect(
+      resolveMechanicsLabEnabled(
+        { ...devApiEnv, EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB: 'TRUE' },
+        false,
+        'api',
+      ),
+    ).toBe(true);
+    expect(resolveMechanicsLabEnabled(devApiEnv, false, 'api')).toBe(false);
+    expect(
+      resolveMechanicsLabEnabled(
+        { ...devApiEnv, EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB: 'yes' },
+        false,
+        'api',
+      ),
+    ).toBe(false);
+    expect(
+      resolveMechanicsLabEnabled(
+        { ...devApiEnv, EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB: 'true' },
+        true,
+        'api',
+      ),
+    ).toBe(false);
+    expect(
+      resolveMechanicsLabEnabled(
+        { ...devApiEnv, EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB: 'true' },
+        false,
+        'fixtures',
+      ),
+    ).toBe(false);
+  });
+
+  it('never resolves the lab in production, fixtures, or invalid configurations', () => {
+    const productionConfig = resolveAppConfig(
+      {
+        EXPO_PUBLIC_CHOONZ_MODE: 'api',
+        EXPO_PUBLIC_CHOONZ_API_BASE_URL: 'https://api.choonz.example',
+        EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB: 'true',
+      },
+      true,
+    );
+    expect(productionConfig).toMatchObject({ mode: 'api', mechanicsLabEnabled: false });
+
+    const fixtureConfig = resolveAppConfig(
+      { EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB: 'true' },
+      false,
+    );
+    expect(fixtureConfig).toMatchObject({
+      mode: 'fixtures',
+      mechanicsLabEnabled: false,
+      configurationIssue: null,
+    });
+
+    const invalidConfig = resolveAppConfig(
+      {
+        EXPO_PUBLIC_CHOONZ_MODE: 'api',
+        EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB: 'true',
+      },
+      false,
+    );
+    expect(invalidConfig).toMatchObject({ mode: 'invalid', mechanicsLabEnabled: false });
+
+    const devApiConfig = resolveAppConfig(
+      {
+        EXPO_PUBLIC_CHOONZ_MODE: 'api',
+        EXPO_PUBLIC_CHOONZ_API_BASE_URL: 'https://api.choonz.example',
+        EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB: 'true',
+      },
+      false,
+    );
+    expect(devApiConfig).toMatchObject({ mode: 'api', mechanicsLabEnabled: true });
   });
 
 });

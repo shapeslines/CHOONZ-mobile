@@ -27,6 +27,15 @@ export function fightQueryKey(scope: string, ...resource: string[]): readonly st
   return protectedQueryKey(scope, 'fight', ...resource);
 }
 
+/**
+ * Mechanics lab keys live beneath the authenticated user namespace
+ * (e.g. `protected/user.<id>/mechanics/scenarios`). Fixture and unscoped
+ * keys are never used for lab data.
+ */
+export function mechanicsQueryKey(scope: string, ...resource: string[]): readonly string[] {
+  return protectedQueryKey(scope, 'mechanics', ...resource);
+}
+
 /** Cancel first, but always remove protected data even if cancellation races or fails. */
 export async function clearProtectedQueries(
   queryClient: Pick<QueryClient, 'cancelQueries' | 'removeQueries'>,

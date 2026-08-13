@@ -16,6 +16,18 @@ import type {
   MatchState,
   MatchStatus,
   MatchTelemetry,
+  MechanicsCorpusIdentity,
+  MechanicsDiffRecord,
+  MechanicsFighterPair,
+  MechanicsGelPair,
+  MechanicsInputEvent,
+  MechanicsNormalizedInputs,
+  MechanicsReplayReceipt,
+  MechanicsScenario,
+  MechanicsScenarioDetail,
+  MechanicsScenarioList,
+  MechanicsScenarioSummary,
+  MechanicsVerdict,
   SoundEvent,
   Stage,
   Toon,
@@ -89,6 +101,22 @@ function jsonRecord(value: unknown, label: string): Record<string, unknown> {
     jsonValue(item, `${label}.${key}`);
   }
   return input;
+}
+
+function jsonRecordOfRecords(
+  value: unknown,
+  label: string,
+): Record<string, Record<string, unknown>> {
+  const input = record(value, label);
+  const output: Record<string, Record<string, unknown>> = {};
+  for (const [key, item] of Object.entries(input)) {
+    const inner = record(item, `${label}.${key}`);
+    for (const [innerKey, leaf] of Object.entries(inner)) {
+      jsonValue(leaf, `${label}.${key}.${innerKey}`);
+    }
+    output[key] = inner;
+  }
+  return output;
 }
 
 function nullableNumber(value: unknown, label: string): number | null {
@@ -419,5 +447,179 @@ export function decodeMatchState(value: unknown): MatchState {
     ann: nullableString(input.ann, 'match state.ann'),
     sound_hooks: stringArray(input.sound_hooks, 'match state.sound_hooks'),
     extra: jsonRecord(input.extra, 'match state.extra'),
+  };
+}
+
+// --------------------------------------------------------------------------- //
+// Mechanics lab (ARC677 P3) — strict, version-gated decoders.
+// --------------------------------------------------------------------------- //
+
+const mechanicsVerdicts = ['pass', 'fail', 'not_applicable'] as const;
+const mechanicsSides = ['p1', 'p2'] as const;
+const mechanicsActions = ['light', 'heavy', 'special', 'block'] as const;
+
+const MECHANICS_SCHEMA_VERSION = '1.0';
+const MECHANICS_CORPUS_VERSION = '1';
+const MECHANICS_ENGINE_REVISION = '1';
+
+function mechanicsVerdict(value: unknown, label: string): MechanicsVerdict {
+  return literal(value, mechanicsVerdicts, label);
+}
+
+function decodeMechanicsFighterPair(value: unknown, label: string): MechanicsFighterPair {
+  const input = record(value, label);
+  return {
+    p1: string(input.p1, `${label}.p1`),
+    p2: string(input.p2, `${label}.p2`),
+  };
+}
+
+function decodeMechanicsGelPair(value: unknown, label: string): MechanicsGelPair {
+  const input = record(value, label);
+  return {
+    p1: string(input.p1, `${label}.p1`),
+    p2: string(input.p2, `${label}.p2`),
+  };
+}
+
+function decodeMechanicsInputEvent(value: unknown, label: string): MechanicsInputEvent {
+  const input = record(value, label);
+  return {
+    step: integer(input.step, `${label}.step`),
+    side: literal(input.side, mechanicsSides, `${label}.side`),
+    action: literal(input.action, mechanicsActions, `${label}.action`),
+  };
+}
+
+function decodeMechanicsIdentity(input: RecordValue, label: string): MechanicsCorpusIdentity {
+  const schemaVersion = string(input.schema_version, `${label}.schema_version`);
+  if (schemaVersion !== MECHANICS_SCHEMA_VERSION) {
+    throw new ResponseDecodeError(
+      `${label}.schema_version ${schemaVersion} is not supported by this client.`,
+    );
+  }
+  const corpusVersion = string(input.corpus_version, `${label}.corpus_version`);
+  if (corpusVersion !== MECHANICS_CORPUS_VERSION) {
+    throw new ResponseDecodeError(
+      `${label}.corpus_version ${corpusVersion} is not supported by this client.`,
+    );
+  }
+  const engineRevision = string(input.engine_revision, `${label}.engine_revision`);
+  if (engineRevision !== MECHANICS_ENGINE_REVISION) {
+    throw new ResponseDecodeError(
+      `${label}.engine_revision ${engineRevision} is not supported by this client.`,
+    );
+  }
+  return {
+    schema_version: schemaVersion,
+    corpus_version: corpusVersion,
+    corpus_hash: string(input.corpus_hash, `${label}.corpus_hash`),
+    engine_revision: engineRevision,
+  };
+}
+
+function decodeMechanicsScenarioSummary(value: unknown): MechanicsScenarioSummary {
+  const input = record(value, 'mechanics scenario summary');
+  return {
+    id: string(input.id, 'scenario summary.id'),
+    title: string(input.title, 'scenario summary.title'),
+    description: string(input.description, 'scenario summary.description'),
+    tags: stringArray(input.tags, 'scenario summary.tags'),
+    seed: integer(input.seed, 'scenario summary.seed'),
+    fighters: decodeMechanicsFighterPair(input.fighters, 'scenario summary.fighters'),
+    gels: decodeMechanicsGelPair(input.gels, 'scenario summary.gels'),
+    stage_id: string(input.stage_id, 'scenario summary.stage_id'),
+    checkpoint_count: integer(input.checkpoint_count, 'scenario summary.checkpoint_count'),
+  };
+}
+
+export function decodeMechanicsScenarioList(value: unknown): MechanicsScenarioList {
+  const input = record(value, 'mechanics scenario list');
+  return {
+    ...decodeMechanicsIdentity(input, 'mechanics scenario list'),
+    scenarios: array(input.scenarios, 'mechanics scenario list.scenarios').map(
+      decodeMechanicsScenarioSummary,
+    ),
+  };
+}
+
+function decodeMechanicsScenario(value: unknown): MechanicsScenario {
+  const input = record(value, 'mechanics scenario');
+  return {
+    id: string(input.id, 'scenario.id'),
+    title: string(input.title, 'scenario.title'),
+    description: string(input.description, 'scenario.description'),
+    tags: stringArray(input.tags, 'scenario.tags'),
+    seed: integer(input.seed, 'scenario.seed'),
+    fighters: decodeMechanicsFighterPair(input.fighters, 'scenario.fighters'),
+    gels: decodeMechanicsGelPair(input.gels, 'scenario.gels'),
+    stage_id: string(input.stage_id, 'scenario.stage_id'),
+    input_tape: array(input.input_tape, 'scenario.input_tape').map((item, index) =>
+      decodeMechanicsInputEvent(item, `scenario.input_tape[${index}]`),
+    ),
+    checkpoints: array(input.checkpoints, 'scenario.checkpoints').map((item, index) =>
+      integer(item, `scenario.checkpoints[${index}]`),
+    ),
+    expected_checkpoints: jsonRecordOfRecords(
+      input.expected_checkpoints,
+      'scenario.expected_checkpoints',
+    ),
+  };
+}
+
+export function decodeMechanicsScenarioDetail(value: unknown): MechanicsScenarioDetail {
+  const input = record(value, 'mechanics scenario detail');
+  return {
+    ...decodeMechanicsIdentity(input, 'mechanics scenario detail'),
+    scenario: decodeMechanicsScenario(input.scenario),
+  };
+}
+
+function decodeMechanicsDiffRecord(value: unknown): MechanicsDiffRecord {
+  const input = record(value, 'mechanics diff');
+  jsonValue(input.expected, 'mechanics diff.expected');
+  jsonValue(input.actual, 'mechanics diff.actual');
+  return {
+    path: string(input.path, 'mechanics diff.path'),
+    expected: input.expected,
+    actual: input.actual,
+  };
+}
+
+function decodeMechanicsNormalizedInputs(value: unknown): MechanicsNormalizedInputs {
+  const input = record(value, 'normalized inputs');
+  return {
+    seed: integer(input.seed, 'normalized inputs.seed'),
+    p1_fighter_id: string(input.p1_fighter_id, 'normalized inputs.p1_fighter_id'),
+    p2_fighter_id: string(input.p2_fighter_id, 'normalized inputs.p2_fighter_id'),
+    p1_gel: string(input.p1_gel, 'normalized inputs.p1_gel'),
+    p2_gel: string(input.p2_gel, 'normalized inputs.p2_gel'),
+    stage_id: string(input.stage_id, 'normalized inputs.stage_id'),
+    input_tape: array(input.input_tape, 'normalized inputs.input_tape').map((item, index) =>
+      decodeMechanicsInputEvent(item, `normalized inputs.input_tape[${index}]`),
+    ),
+    checkpoints: array(input.checkpoints, 'normalized inputs.checkpoints').map((item, index) =>
+      integer(item, `normalized inputs.checkpoints[${index}]`),
+    ),
+  };
+}
+
+export function decodeMechanicsReplayReceipt(value: unknown): MechanicsReplayReceipt {
+  const input = record(value, 'mechanics replay receipt');
+  return {
+    ...decodeMechanicsIdentity(input, 'mechanics replay receipt'),
+    scenario_id: string(input.scenario_id, 'replay receipt.scenario_id'),
+    overridden: boolean(input.overridden, 'replay receipt.overridden'),
+    normalized_inputs: decodeMechanicsNormalizedInputs(input.normalized_inputs),
+    actual_checkpoints: jsonRecordOfRecords(
+      input.actual_checkpoints,
+      'replay receipt.actual_checkpoints',
+    ),
+    expected_checkpoints: jsonRecordOfRecords(
+      input.expected_checkpoints,
+      'replay receipt.expected_checkpoints',
+    ),
+    diffs: array(input.diffs, 'replay receipt.diffs').map(decodeMechanicsDiffRecord),
+    verdict: mechanicsVerdict(input.verdict, 'replay receipt.verdict'),
   };
 }

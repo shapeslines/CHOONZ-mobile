@@ -11,6 +11,7 @@ export default function RootLayout() {
         <Stack.Screen name="profile" />
         <Stack.Screen name="connections" />
         <Stack.Screen name="fight" />
+        <Stack.Screen name="lab" />
       </Stack>
     </AppProviders>
   );
