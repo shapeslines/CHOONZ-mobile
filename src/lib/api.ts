@@ -10,6 +10,9 @@ import {
   decodeLoadouts,
   decodeMatch,
   decodeMatchState,
+  decodeMechanicsReplayReceipt,
+  decodeMechanicsScenarioDetail,
+  decodeMechanicsScenarioList,
   decodeStages,
   decodeToon,
   decodeToons,
@@ -45,6 +48,10 @@ import type {
   MatchCreateInput,
   MatchState,
   MatchTickInput,
+  MechanicsReplayOverrides,
+  MechanicsReplayReceipt,
+  MechanicsScenarioDetail,
+  MechanicsScenarioList,
   Stage,
   Toon,
   ToonCreateInput,
@@ -91,6 +98,12 @@ export interface ChoonzApi {
   actMatch(matchId: number, input: MatchActInput): Promise<MatchState>;
   getMatchState(matchId: number): Promise<MatchState>;
   rematch(matchId: number): Promise<Match>;
+  getMechanicsScenarios(): Promise<MechanicsScenarioList>;
+  getMechanicsScenario(scenarioId: string): Promise<MechanicsScenarioDetail>;
+  replayMechanics(
+    scenarioId: string,
+    overrides?: MechanicsReplayOverrides,
+  ): Promise<MechanicsReplayReceipt>;
 }
 
 export interface ChoonzApiClientOptions {
@@ -308,6 +321,57 @@ export class ChoonzApiClient implements ChoonzApi {
       () => this.fixtures.rematch(matchId),
       'POST',
     );
+  }
+
+  getMechanicsScenarios(): Promise<MechanicsScenarioList> {
+    this.requireMechanicsEligibility();
+    return this.fromMechanicsMode('/mechanics/scenarios', decodeMechanicsScenarioList);
+  }
+
+  getMechanicsScenario(scenarioId: string): Promise<MechanicsScenarioDetail> {
+    this.requireMechanicsEligibility();
+    return this.fromMechanicsMode(
+      `/mechanics/scenarios/${encodeURIComponent(scenarioId)}`,
+      decodeMechanicsScenarioDetail,
+    );
+  }
+
+  replayMechanics(
+    scenarioId: string,
+    overrides?: MechanicsReplayOverrides,
+  ): Promise<MechanicsReplayReceipt> {
+    this.requireMechanicsEligibility();
+    const body: { scenario_id: string; overrides?: MechanicsReplayOverrides } = {
+      scenario_id: scenarioId,
+    };
+    if (overrides) {
+      body.overrides = overrides;
+    }
+    return this.fromMechanicsMode('/mechanics/replay', decodeMechanicsReplayReceipt, 'POST', body);
+  }
+
+  /**
+   * The lab is API-only and developer-only. Any ineligible configuration
+   * fails locally before the API URL, token, or fetcher is ever observed.
+   */
+  private requireMechanicsEligibility(): void {
+    const { config } = this.options;
+    if (!config.mechanicsLabEnabled || config.mode !== 'api' || config.isProduction) {
+      throw new ChoonzClientError(
+        'configuration',
+        'The mechanics lab requires an eligible non-production API configuration.',
+      );
+    }
+  }
+
+  private async fromMechanicsMode<T>(
+    path: string,
+    decoder: Decoder<T>,
+    method: HttpMethod = 'GET',
+    body?: unknown,
+  ): Promise<T> {
+    const config = this.requireApiConfiguration();
+    return this.request(`${config.apiBaseUrl}${path}`, decoder, true, method, body);
   }
 
   private async fromFightMode<T>(

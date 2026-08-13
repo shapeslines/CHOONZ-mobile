@@ -55,9 +55,44 @@ public configuration, not secrets.
 | `EXPO_PUBLIC_SUPABASE_URL` | Shared CHOONZ Supabase URL; follows the same HTTPS/loopback rule. |
 | `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Preferred public Supabase key; must begin `sb_publishable_`. |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Optional legacy fallback only: a decodable JWT whose payload role is exactly `anon`. An invalid primary key never falls back. |
+| `EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB` | Developer-only mechanics lab gate; see below. |
 
 Never put `service_role`, `sb_secret_` keys, database credentials, or other
 private values in this app or any `EXPO_PUBLIC_*` variable.
+
+## Mechanics lab (developer-only)
+
+The hidden `/lab` route replays the backend's immutable versioned scenario
+corpus. It is a developer proving surface, never a player feature: no bots,
+training, or tutorials are included, and it never persists anything.
+
+Eligibility resolves true only when **all** of these hold:
+
+| Condition | Required value |
+| --- | --- |
+| Public flag | `EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB` exactly `true` (case-insensitive) |
+| Runtime | Non-production (`NODE_ENV`/`__DEV__` development build) |
+| Mode | Valid `api` (`fixtures`/`invalid` never become eligible) |
+
+Truth table:
+
+| Flag | Runtime | Mode | `mechanicsLabEnabled` | Lab behavior |
+| --- | --- | --- | --- | --- |
+| `true` | dev | `api` | `true` | Authenticated replay UI |
+| `true` | dev | `fixtures` | `false` | Visible `API mode required`; zero token/URL/fetch/replay observation |
+| `true` | production | `api` | `false` | Fail-closed message; no controls |
+| anything else | any | any | `false` | Fail-closed message; no controls |
+
+The lab is API-only: there is no fixture corpus and no simulated replay.
+Unsupported corpus schema or engine revisions are rejected by the strict
+decoders before any control renders. The UI renders only server receipts —
+normalized inputs, actual/expected checkpoints, returned sorted diffs, and the
+server verdict (`pass` / `fail` / `not_applicable`) — without recomputing a
+golden, reordering diffs, or inferring a verdict. Any override, even one
+identical to the canonical value, is visibly `not_applicable`.
+
+Production web deployment of this slice remains deferred; the lab flag must
+never be enabled in a production build.
 
 Native sessions use a SecureStore-compatible chunking adapter so large auth
 payloads stay within the native storage boundary. Web uses `localStorage` when
