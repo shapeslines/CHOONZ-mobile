@@ -25,8 +25,8 @@ import type {
 const LOOP = 128;
 const allowedTransitions: Record<MatchStatus, MatchStatus[]> = {
   ready: ['active', 'cancelled'],
-  active: ['paused', 'completed', 'cancelled'],
-  paused: ['active', 'completed', 'cancelled'],
+  active: ['cancelled', 'completed', 'paused'],
+  paused: ['active', 'cancelled', 'completed'],
   completed: [],
   cancelled: [],
 };
@@ -228,6 +228,9 @@ export class FixtureMatchService {
     record.match.result_step = record.match.last_step;
     record.match.result_p1_hp = state.p1.hp;
     record.match.result_p2_hp = state.p2.hp;
+    // The backend mints a share token when a match completes; fixtures retain
+    // deterministic values while preserving that observable MatchRead contract.
+    record.match.share_token = `fixture-share-${record.match.id}`;
     record.match.telemetry = {
       result,
       result_step: record.match.last_step,
@@ -298,6 +301,7 @@ export class FixtureMatchService {
       result_p1_hp: null,
       result_p2_hp: null,
       last_step: 0,
+      share_token: null,
       telemetry: null,
       allowed_transitions: nextTransitions('ready'),
     };
