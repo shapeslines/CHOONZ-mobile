@@ -1,36 +1,38 @@
 # CHOONZ-mobile — next session
 
-## State @ `bc8625b` · 2026-08-11 · doton/opencode (session wrapped)
-P1 fully landed on both repos — backend `#36`/`#37`, mobile `#3`/`#4`. All planning
-docs merged: post-P1 slate, dependabot mapping addendum, rolling handoff, next-wave
-slate. Repo clean on main; claim worktrees removed. Escalated wrap handoff recorded
-in vault Exchange (`2026-08-11-handoff-choonz-mobile-session-wrap-escalated`).
+## State @ draft-reconciliation candidate · 2026-08-13
 
-## Shipped
-- `bc8625b` PR #5 (post-P1 slate + dependabot addendum) and PR #6 (S1 handoff +
-  next-wave slate) merged; main synced; merged branches + worktrees removed
-- Dependabot alerts #1–#3 dismissed (`tolerable_risk`, exception-doc reference)
+P1, P2 profile/account polish, the developer-only P3 mechanics lab, and the
+catalog/fight accessibility announcement slices are on `main`. The 17 retained
+drafts #8–#25 have been reconciled in one preservation union: already-landed or
+superseded rolling changes are retained through ancestry; dated evidence remains
+available as historical records; and the four still-live source/test fixes from
+#22–#25 are applied to current main.
 
-## Signals
-- **state/flags:** npm-audit-exception review-by **2026-09-10**; any
-  package/lock/CI change requires owner reapproval; web export validation-only (no
-  deploy without CSP + third-party-script review)
-- **communicated:** fence declaration broadcast for CHOONZ-mobile docs lane
-- **raised for /custodian:** none — README/AGENTS freshness is N1's own lane
-- **FOR /brain:** brain/choonz-mobile.md ← choonz-mobile@`bc8625b`: P1 shipped
-  capability, mode contract (`fixtures|api`), gate battery, audit-exception
-  boundary, slate chain (postp1 → next), P2 gating
-- **DEFERRED / unresolved:** N4 board advance + ARC 677 P1 close (owner) · N5
-  2026-09-10 review (owner) · N6 P2 entry (owner — peer session
-  `opencode-choonz-p2-slate` logged tinytoonz activity at ledger 1611/1613;
-  confirm ownership before firing) · N2 contract alignment, N3 green verification,
-  N7 CSP prep (agent, queued)
+## Verification
 
-## Next — FIRST action
-1. Fire **N1** (S2 freshness pass — README/AGENTS) per
-   `docs/slate-choonzm-next-2026-08-11.md`; then N2, N3, N7 in parallel
+- locked clean install: PASS
+- Vitest: 59/59
+- rendered Jest/RNTL: 33/33
+- lint, typecheck, Expo config, Expo Doctor: PASS
+- static web export: PASS, eight routes
+- every original draft head #8–#25: ancestor of the reconciliation candidate
 
-## Queue
-- N1 → N2 → N3 → N7 (agent, fence-disjoint, parallel-fireable)
-- N4 → N6 (owner; P2 entry after ARC 677 P1 close) · N5 (2026-09-10) · N8
-  (upstream-fix upgrade, owner)
+## Active boundaries
+
+- Production EAS build/store submission, Supabase provider changes, and branch
+  protection remain owner-only.
+- Web export remains validation-only until the documented CSP review and an
+  owner-approved report-only rollout are repeated against the intended release.
+- The accepted npm audit exception is due for review on **2026-09-10**. Any
+  package, lockfile, or CI change requires a fresh dependency review.
+- The mechanics lab remains non-production, API-only, and exact-flag gated.
+
+## Next
+
+1. Obtain exact-head hosted CI for the reconciliation union and merge it without
+   squashing away the preserved draft ancestry.
+2. Confirm exact-main CI after landing; all 17 original drafts should then be
+   recognized as merged through ancestry.
+3. Keep production build, provider, hosting, and store actions closed unless the
+   owner opens a specific gate.

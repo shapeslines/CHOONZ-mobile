@@ -7,9 +7,11 @@ Router slice includes service status, Supabase email/password sign-in, profile,
 the static roster catalog, and one constrained P1 practice-match loop. It
 consumes the **CHOONZ headless backend** over its bearer-token API.
 
-> **Status:** Expo SDK 56 review candidate. The Fight route supports only the
-> frozen P1 Toon/loadout and match lifecycle controls; OAuth/deep-link provider
-> flows, EAS linking, store submission, and P2/P3 work are excluded.
+> **Status:** Expo SDK 56 review candidate. The Fight route supports the frozen
+> P1 Toon/loadout and match lifecycle controls; P2 adds bounded profile and
+> connection management; and P3 adds only the gated developer mechanics lab.
+> OAuth/deep-link provider flows, EAS linking, store submission, bots, training,
+> tutorials, and production web deployment remain excluded.
 
 ## Stack
 
@@ -111,6 +113,11 @@ The typed runtime client decodes these bootstrap reads:
 
 It distinguishes configuration, authentication, network, and malformed/HTTP
 response failures. A `401` invalidates the local session and clears cached data.
+
+The authenticated account slice additionally supports `PATCH /me`,
+`GET /me/connections`, and URL-safe `DELETE /me/connections/{client_id}`.
+Fixture-mode profile changes and connection revocations stay local and never
+read a bearer token or contact a live URL.
 
 The review-only Fight route additionally uses the frozen P1 contract: list/create
 Toons and loadouts, create/read a match, start/pause/resume/complete/cancel,
