@@ -439,6 +439,9 @@ describe('CHOONZ mechanics lab client', () => {
     expect(() => decodeMechanicsScenarioList({ ...scenarioList, schema_version: '2.0' })).toThrow(
       ResponseDecodeError,
     );
+    expect(() => decodeMechanicsScenarioDetail({ ...scenarioDetail, corpus_version: '2' })).toThrow(
+      ResponseDecodeError,
+    );
     expect(() => decodeMechanicsScenarioDetail({ ...scenarioDetail, corpus_version: '' })).toThrow(
       ResponseDecodeError,
     );

@@ -459,6 +459,7 @@ const mechanicsSides = ['p1', 'p2'] as const;
 const mechanicsActions = ['light', 'heavy', 'special', 'block'] as const;
 
 const MECHANICS_SCHEMA_VERSION = '1.0';
+const MECHANICS_CORPUS_VERSION = '1';
 const MECHANICS_ENGINE_REVISION = '1';
 
 function mechanicsVerdict(value: unknown, label: string): MechanicsVerdict {
@@ -498,8 +499,10 @@ function decodeMechanicsIdentity(input: RecordValue, label: string): MechanicsCo
     );
   }
   const corpusVersion = string(input.corpus_version, `${label}.corpus_version`);
-  if (!corpusVersion) {
-    throw new ResponseDecodeError(`${label}.corpus_version must not be empty.`);
+  if (corpusVersion !== MECHANICS_CORPUS_VERSION) {
+    throw new ResponseDecodeError(
+      `${label}.corpus_version ${corpusVersion} is not supported by this client.`,
+    );
   }
   const engineRevision = string(input.engine_revision, `${label}.engine_revision`);
   if (engineRevision !== MECHANICS_ENGINE_REVISION) {
