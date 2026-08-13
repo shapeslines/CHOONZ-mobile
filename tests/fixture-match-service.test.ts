@@ -36,17 +36,30 @@ describe('deterministic fixture match service', () => {
 
     await expect(service.actMatch(ready.id, { action: 'light' })).rejects.toMatchObject({ status: 409 });
     const active = await service.startMatch(ready.id);
-    expect(active.status).toBe('active');
+    expect(active).toMatchObject({
+      status: 'active',
+      allowed_transitions: ['cancelled', 'completed', 'paused'],
+    });
     await service.tickMatch(active.id, { delta: 3 });
     const paused = await service.pauseMatch(active.id);
     expect(paused.status).toBe('paused');
     await expect(service.tickMatch(paused.id)).rejects.toMatchObject({ status: 409 });
     await service.resumeMatch(active.id);
     const completed = await service.completeMatch(active.id);
-    expect(completed).toMatchObject({ status: 'completed', result_step: 3, telemetry: { input_count: 0 } });
+    expect(completed).toMatchObject({
+      status: 'completed',
+      result_step: 3,
+      share_token: null,
+      telemetry: { input_count: 0 },
+    });
 
     const rematch = await service.rematch(completed.id);
-    expect(rematch).toMatchObject({ status: 'ready', seed: completed.seed + 1, last_step: 0 });
+    expect(rematch).toMatchObject({
+      status: 'ready',
+      seed: completed.seed + 1,
+      last_step: 0,
+      share_token: null,
+    });
     const unstarted = await service.createMatch({ p1_toon_id: toon.id });
     await expect(service.rematch(unstarted.id)).rejects.toMatchObject({ status: 409 });
   });

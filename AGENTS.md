@@ -5,8 +5,10 @@ Read first. Mobile client for CHOONZ.
 ## What this is
 
 Expo Router + React Native client for the CHOONZ fighting-game backend
-(`shapeslines/CHOONZ`). The first shipped slice is intentionally read-only:
-service status, authenticated identity, and the static combat catalog.
+(`shapeslines/CHOONZ`). The shipped review slice includes service status,
+authenticated identity, profile and connection management, the static combat
+catalog, the constrained P1 practice-match lifecycle, and a developer-only
+mechanics lab backed by the server's immutable scenario corpus.
 
 ## Stack
 
@@ -67,8 +69,10 @@ Use only `expo-router` imports for app navigation; do not add direct
 Follow `shapeslines/Clubheavy-Mobile` and `shapeslines/Shapeslines-Mobile` for
 directory layout, hook patterns, and adapter shape.
 
-This repository does not own match mutations, OAuth/provider deep-link flows,
-EAS linking, or store submission in the current slice.
+This repository owns the mobile client for the bounded P1 match mutations and
+the P2 profile/connection calls. It does not own backend match authority,
+OAuth/provider deep-link flows, EAS linking, or store submission in the current
+slice.
 
 Web export is validation-only. Do not deploy the web target without a CSP and
 third-party-script review: browser session persistence uses localStorage. Keep
