@@ -144,6 +144,9 @@ describe('FightContent rendered states', () => {
 
     expect(view.getByLabelText('hud-p1')).toBeTruthy();
     expect(view.getByText('TIMER 124 · COMBO 2 · ROUND CALL')).toBeTruthy();
+    const announcement = view.getByText('ROUND CALL');
+    expect(announcement.props.role).toBe('status');
+    expect(announcement.props.accessibilityLiveRegion).toBe('polite');
     await fireEvent.press(view.getByRole('button', { name: 'fight-heavy' }));
     await fireEvent.press(view.getByRole('button', { name: 'fight-tick' }));
     expect(props.act).toHaveBeenCalledWith('heavy');
