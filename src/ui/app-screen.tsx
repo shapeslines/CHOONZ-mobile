@@ -10,7 +10,7 @@ import { tokens } from '@/ui/tokens';
 function NavButton({ href, label }: { href: Href; label: string }) {
   return (
     <Link href={href} asChild>
-      <Pressable style={styles.navButton}>
+      <Pressable accessibilityLabel={label} style={styles.navButton}>
         <Text style={styles.navText}>{label}</Text>
       </Pressable>
     </Link>
