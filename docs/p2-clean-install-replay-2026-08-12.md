@@ -11,7 +11,7 @@ not merge or release any carrier.
 - Repository: `shapeslines/CHOONZ-mobile`
 - Review input: PR #15, head `327a11577124bbfa3e028031610b06c8a33f9a77`
 - Input base: `origin/main@9a9388244ff09b4376c5c2b3148d1a4114dc105b`
-- Verification worktree: `C:\Users\doton\Desktop\GITHUB\CHOONZ-mobile\.worktrees\choonzm-p2-clean-install-input`
+- Verification worktree: `<local-worktree>`
 - Input worktree mode: detached, exact PR #15 head; no tracked changes after replay
 - `package-lock.json` blob: `cc0d71d7f96d872ffbb3e5ab4de255a8135793e6`
 

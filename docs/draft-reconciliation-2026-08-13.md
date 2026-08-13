@@ -22,7 +22,7 @@ build, deployment, provider change, or store authorization.
 | #22 | content applied | Prevents concurrent connection revoke controls and exposes disabled accessibility state. |
 | #23 | content applied | Gives primary navigation links explicit accessible names. |
 | #24 | content applied | Aligns the home Fight link's accessible name with its visible action. |
-| #25 | content applied | Aligns fixture transitions/share-token lifecycle with the current backend read contract. |
+| #25 | partially applied | Aligns fixture transition ordering; its automatic predictable share token is omitted because current backend sharing requires a separate explicit-consent action outside this mobile/fixture scope. |
 
 The union uses merge ancestry for every original head. Superseded rolling files
 were deliberately not overlaid onto current main; preservation does not require

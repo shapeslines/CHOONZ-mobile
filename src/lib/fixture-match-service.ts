@@ -228,9 +228,6 @@ export class FixtureMatchService {
     record.match.result_step = record.match.last_step;
     record.match.result_p1_hp = state.p1.hp;
     record.match.result_p2_hp = state.p2.hp;
-    // The backend mints a share token when a match completes; fixtures retain
-    // deterministic values while preserving that observable MatchRead contract.
-    record.match.share_token = `fixture-share-${record.match.id}`;
     record.match.telemetry = {
       result,
       result_step: record.match.last_step,

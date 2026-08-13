@@ -18,7 +18,7 @@ receipt. The carrier PRs #42/#8/#9 remain open, unmerged, and untouched.
 
 ## Backend replay
 
-Replay worktree: `C:\Users\doton\Documents\ChatGPT\CHOONZ\p2-backend`.
+Replay worktree: `<local-backend-worktree>`.
 
 - `python -m pytest -q`: **232 passed**, one existing Starlette/httpx deprecation warning.
 - `ruff check .`: **PASS**.
@@ -32,7 +32,7 @@ Replay worktree: `C:\Users\doton\Documents\ChatGPT\CHOONZ\p2-backend`.
 
 ## Mobile replay
 
-Replay worktree: `C:\Users\doton\Desktop\GITHUB\CHOONZ-mobile\.worktrees\choonzm-p2-profile-account`.
+Replay worktree: `<local-mobile-worktree>`.
 
 - `npm test`: **47 passed** across 9 Vitest files.
 - `npm run test:screen`: **17 passed** across 3 rendered Jest suites.

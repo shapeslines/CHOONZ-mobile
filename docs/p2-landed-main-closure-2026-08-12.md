@@ -32,7 +32,7 @@ receipt, or canonical project record was modified by this slice.
   or migration execution used.
 - Visual Maintainer baseline: `PASS projections=6 changed=0 impacts=0`.
 - Detached verification worktree:
-  `C:\Users\doton\Desktop\GITHUB\CHOONZ\.worktrees\p2-landed-main-input`
+  `<local-backend-worktree>`
   at exact `0d703820639343ecec0bc6a5fc509b1eb4f17d4b`, clean.
 
 ### Mobile
@@ -49,7 +49,7 @@ receipt, or canonical project record was modified by this slice.
 - Lockfile SHA-256:
   `fe86d80b10d5a78361c5080582df51a6616e5098d9c34b6fd8e5bbffafd5b805`.
 - Detached verification worktree:
-  `C:\Users\doton\Desktop\GITHUB\CHOONZ-mobile\.worktrees\p2-landed-main-closure`
+  `<local-mobile-worktree>`
   at exact `837412eac11e4e38a7560dc43362a0fb8861592f`, clean.
 
 ## Cross-repository contract

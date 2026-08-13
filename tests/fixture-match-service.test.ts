@@ -49,7 +49,7 @@ describe('deterministic fixture match service', () => {
     expect(completed).toMatchObject({
       status: 'completed',
       result_step: 3,
-      share_token: `fixture-share-${completed.id}`,
+      share_token: null,
       telemetry: { input_count: 0 },
     });
 
