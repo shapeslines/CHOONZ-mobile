@@ -8,6 +8,34 @@ import { useAuth } from '@/providers/auth-provider';
 import { AppScreen, BodyText, Panel, PanelTitle } from '@/ui/app-screen';
 import { tokens } from '@/ui/tokens';
 
+export function CatalogFeedback({
+  pending,
+  failure,
+}: {
+  pending: boolean;
+  failure: string | null;
+}) {
+  return (
+    <>
+      {pending ? (
+        <View
+          accessibilityLabel="Loading read-only catalog…"
+          accessibilityLiveRegion="polite"
+          accessibilityRole="progressbar"
+          accessibilityState={{ busy: true }}
+        >
+          <BodyText>Loading read-only catalog…</BodyText>
+        </View>
+      ) : null}
+      {failure ? (
+        <Text accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.failure}>
+          {failure}
+        </Text>
+      ) : null}
+    </>
+  );
+}
+
 export default function CatalogScreen() {
   const api = useChoonzApi();
   const auth = useAuth();
@@ -56,8 +84,7 @@ export default function CatalogScreen() {
           <BodyText>Sign in on Profile to read the live catalog.</BodyText>
         </Panel>
       ) : null}
-      {pending ? <BodyText>Loading read-only catalog…</BodyText> : null}
-      {failed ? <Text style={styles.failure}>{errorMessage(failed.error)}</Text> : null}
+      <CatalogFeedback pending={pending} failure={failed ? errorMessage(failed.error) : null} />
 
       {catalog.data ? (
         <Panel>

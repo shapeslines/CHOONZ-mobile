@@ -240,3 +240,100 @@ export interface MatchTickInput {
 export interface MatchCompleteInput {
   step?: number | null;
 }
+
+export type MechanicsVerdict = 'pass' | 'fail' | 'not_applicable';
+
+export interface MechanicsCorpusIdentity {
+  schema_version: string;
+  corpus_version: string;
+  corpus_hash: string;
+  engine_revision: string;
+}
+
+export interface MechanicsFighterPair {
+  p1: string;
+  p2: string;
+}
+
+export interface MechanicsGelPair {
+  p1: string;
+  p2: string;
+}
+
+export interface MechanicsInputEvent {
+  step: number;
+  side: 'p1' | 'p2';
+  action: FightAction;
+}
+
+export interface MechanicsScenarioSummary {
+  id: string;
+  title: string;
+  description: string;
+  tags: string[];
+  seed: number;
+  fighters: MechanicsFighterPair;
+  gels: MechanicsGelPair;
+  stage_id: string;
+  checkpoint_count: number;
+}
+
+export interface MechanicsScenarioList extends MechanicsCorpusIdentity {
+  scenarios: MechanicsScenarioSummary[];
+}
+
+export interface MechanicsScenario {
+  id: string;
+  title: string;
+  description: string;
+  tags: string[];
+  seed: number;
+  fighters: MechanicsFighterPair;
+  gels: MechanicsGelPair;
+  stage_id: string;
+  input_tape: MechanicsInputEvent[];
+  checkpoints: number[];
+  expected_checkpoints: Record<string, Record<string, unknown>>;
+}
+
+export interface MechanicsScenarioDetail extends MechanicsCorpusIdentity {
+  scenario: MechanicsScenario;
+}
+
+export interface MechanicsReplayOverrides {
+  seed?: number | null;
+  p1_fighter_id?: string | null;
+  p2_fighter_id?: string | null;
+  p1_gel?: string | null;
+  p2_gel?: string | null;
+  stage_id?: string | null;
+  input_tape?: MechanicsInputEvent[] | null;
+  checkpoints?: number[] | null;
+}
+
+export interface MechanicsDiffRecord {
+  path: string;
+  expected: unknown;
+  actual: unknown;
+}
+
+export interface MechanicsNormalizedInputs {
+  seed: number;
+  p1_fighter_id: string;
+  p2_fighter_id: string;
+  p1_gel: string;
+  p2_gel: string;
+  stage_id: string;
+  input_tape: MechanicsInputEvent[];
+  checkpoints: number[];
+}
+
+export interface MechanicsReplayReceipt extends MechanicsCorpusIdentity {
+  scenario_id: string;
+  overridden: boolean;
+  normalized_inputs: MechanicsNormalizedInputs;
+  actual_checkpoints: Record<string, Record<string, unknown>>;
+  expected_checkpoints: Record<string, Record<string, unknown>>;
+  diffs: MechanicsDiffRecord[];
+  verdict: MechanicsVerdict;
+}
