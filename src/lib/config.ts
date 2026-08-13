@@ -6,6 +6,7 @@ export interface PublicEnvironment {
   EXPO_PUBLIC_SUPABASE_URL?: string;
   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?: string;
   EXPO_PUBLIC_SUPABASE_ANON_KEY?: string;
+  EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB?: string;
 }
 
 export interface RuntimeConfig {
@@ -15,6 +16,7 @@ export interface RuntimeConfig {
   supabaseUrl: string | null;
   supabasePublishableKey: string | null;
   supabaseLegacyAnonKey: string | null;
+  mechanicsLabEnabled: boolean;
   configurationIssue: string | null;
 }
 
@@ -69,6 +71,22 @@ function normalizeSupabaseUrl(value: string | undefined, isProduction: boolean):
   return normalizeApiBaseUrl(value, isProduction);
 }
 
+/**
+ * The developer-only mechanics lab is eligible only when the public flag is
+ * exactly (case-insensitive) "true", the runtime is non-production, and the
+ * resolved mode is valid `api`. Production always resolves false. A fixture
+ * or invalid build stays fixture/invalid — it never becomes eligible and
+ * never becomes an invalid configuration just because the flag is present.
+ */
+export function resolveMechanicsLabEnabled(
+  environment: PublicEnvironment,
+  isProduction: boolean,
+  mode: ChoonzMode,
+): boolean {
+  const flag = trim(environment.EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB)?.toLowerCase();
+  return flag === 'true' && !isProduction && mode === 'api';
+}
+
 export function resolveAppConfig(
   environment: PublicEnvironment,
   isProduction: boolean,
@@ -81,6 +99,7 @@ export function resolveAppConfig(
   const supabaseUrl = normalizeSupabaseUrl(suppliedSupabaseUrl, isProduction);
   const supabasePublishableKey = trim(environment.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ?? null;
   const supabaseLegacyAnonKey = trim(environment.EXPO_PUBLIC_SUPABASE_ANON_KEY) ?? null;
+  const mechanicsLabEnabled = resolveMechanicsLabEnabled(environment, isProduction, 'invalid');
 
   if (selectedMode !== 'fixtures' && selectedMode !== 'api') {
     return {
@@ -90,6 +109,7 @@ export function resolveAppConfig(
       supabaseUrl,
       supabasePublishableKey,
       supabaseLegacyAnonKey,
+      mechanicsLabEnabled,
       configurationIssue:
         'CHOONZ mode must be explicitly set to fixtures or api in production builds.',
     };
@@ -105,6 +125,7 @@ export function resolveAppConfig(
       supabaseUrl,
       supabasePublishableKey,
       supabaseLegacyAnonKey,
+      mechanicsLabEnabled,
       configurationIssue:
         'API must use HTTPS in production or an explicit loopback HTTP URL in development.',
     };
@@ -118,6 +139,7 @@ export function resolveAppConfig(
       supabaseUrl: null,
       supabasePublishableKey,
       supabaseLegacyAnonKey,
+      mechanicsLabEnabled,
       configurationIssue:
         'Supabase must use HTTPS in production or an explicit loopback HTTP URL in development.',
     };
@@ -131,6 +153,7 @@ export function resolveAppConfig(
       supabaseUrl,
       supabasePublishableKey,
       supabaseLegacyAnonKey,
+      mechanicsLabEnabled,
       configurationIssue:
         'API mode requires a valid HTTPS API URL in production or an explicit loopback HTTP URL in development.',
     };
@@ -143,6 +166,7 @@ export function resolveAppConfig(
     supabaseUrl,
     supabasePublishableKey,
     supabaseLegacyAnonKey,
+    mechanicsLabEnabled: resolveMechanicsLabEnabled(environment, isProduction, selectedMode),
     configurationIssue: null,
   };
 }
@@ -154,6 +178,8 @@ function currentEnvironment(): PublicEnvironment {
     EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
     EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB:
+      process.env.EXPO_PUBLIC_CHOONZ_ENABLE_MECHANICS_LAB,
   };
 }
 
