@@ -511,7 +511,11 @@ function Hud({ state }: { state: MatchState | null }) {
       <BodyText>
         TIMER {state.timer} · COMBO {state.combo} · {state.ceremony.replace(/_/g, ' ').toUpperCase()}
       </BodyText>
-      {state.ann ? <Text style={styles.announcement}>{state.ann}</Text> : null}
+      {state.ann ? (
+        <Text accessibilityLiveRegion="polite" role="status" style={styles.announcement}>
+          {state.ann}
+        </Text>
+      ) : null}
     </Panel>
   );
 }
