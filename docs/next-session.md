@@ -28,6 +28,12 @@ available as historical records; and the four still-live source/test fixes from
   package, lockfile, or CI change requires a fresh dependency review.
 - The mechanics lab remains non-production, API-only, and exact-flag gated.
 
+## 2026-08-14 — SDK 57 (owner-authorized E2)
+
+Expo 56 → 57.0.13 / RN 0.86.2. Gates green (vitest 59, jest 33, doctor 20/20,
+web export 8 routes). `image-size` highs remain: no patched release exists
+(`<=2.0.2`, latest 2.0.2). See `docs/security/npm-audit-exception.md`.
+
 ## Next
 
 1. Obtain exact-head hosted CI for the reconciliation union and merge it without
