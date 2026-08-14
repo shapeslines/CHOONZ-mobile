@@ -12,7 +12,7 @@ mechanics lab backed by the server's immutable scenario corpus.
 
 ## Stack
 
-TypeScript / Expo SDK 56 / React Native 0.85 / React 19 / Expo Router /
+TypeScript / Expo SDK 57 / React Native 0.86 / React 19 / Expo Router /
 Supabase Auth / TanStack Query. Node 22+ is required. Routes live in `src/app`.
 Use only `expo-router` imports for app navigation; do not add direct
 `@react-navigation/*` app imports or dependencies.

@@ -1,7 +1,26 @@
-# npm audit exception — Expo SDK 56 build and rendered-test chain
+# npm audit exception — Expo SDK 57 build and rendered-test chain
 
 Status: `ACCEPTED FOR REVIEW-ONLY` (time-bounded) — this is not deployment
 approval and grants no EAS, store, native-build, or production-web authority.
+
+## 2026-08-14 SDK 57 refresh (owner-authorized E2)
+
+Owner authorized the Expo toolchain bump. Landed: Expo `57.0.13`, React Native
+`0.86.2`, `expo-router ~57.0.13`, Reanimated `4.5.1`, Worklets `0.10.1`,
+`jest-expo ~57.0.4`, plus `@react-native/jest-preset@0.86.2` (required by
+jest-expo 57). Gates: typecheck, lint, vitest 59/59, jest screens 33/33,
+`expo-doctor` 20/20, web export 8 routes.
+
+**What this did not clear:** the two `image-size` highs
+(GHSA-w3rx-r6r6-pgpr, GHSA-5p2g-fcmc-qvqq). Advisory range is `<=2.0.2` and
+latest published is `2.0.2` — there is **no patched release**. Metro 0.84.4
+(still pulled via `@expo/metro@56.0.0` under SDK 57) depends on `image-size@^1`.
+`npm audit fix --force` still proposes Expo **53.0.27**, a downgrade we refuse.
+The `uuid` moderate (GHSA-w5hq-g745-h8pq) remains on `xcode` → `uuid@7`.
+Post-upgrade audit: 13 high / 7 moderate / 0 critical (was 15 high / 7 moderate).
+
+Removal condition is now: a patched `image-size` (`>2.0.2`) **or** an Expo/Metro
+line that does not depend on the vulnerable parser.
 
 ## Attribution
 
