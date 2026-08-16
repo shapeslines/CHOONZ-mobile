@@ -7,13 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { fixtureDataLabel } from '@/lib/config';
 import { useSkins } from '@/providers/skin-provider';
 import { useRuntimeConfig } from '@/providers/runtime-config-provider';
-import { tokens } from '@/ui/tokens';
+import { tokens, typeScale } from '@/ui/tokens';
 
 /**
- * The app shell. Surface colors (background, header border, wordmark, nav)
- * resolve from the active ui_theme skin via the SkinProvider (M-S2); the
- * default skin equals the static tokens, so nothing changes until a user
- * selects a different gel theme.
+ * The app shell. Surface colors resolve from the active ui_theme skin via
+ * the SkinProvider (M-S2); typography uses the house stack (Archivo Black
+ * display, Inter body, JetBrains Mono meta). The default skin equals the
+ * static tokens, so nothing changes until a user selects a gel theme.
  */
 export function AppScreen({
   title,
@@ -34,8 +34,8 @@ export function AppScreen({
         paddingHorizontal: theme.space,
         paddingVertical: theme.space,
       },
-      wordmark: { color: theme.accent, fontSize: 13, fontWeight: '900' as const, letterSpacing: 2 },
-      title: { color: theme.text, fontSize: 28, fontWeight: '900' as const, letterSpacing: 1 },
+      wordmark: { color: theme.accent, ...typeScale.label },
+      title: { color: theme.text, ...typeScale.display },
       nav: {
         borderTopColor: theme.border,
         borderTopWidth: theme.borderWidth,
@@ -51,7 +51,7 @@ export function AppScreen({
         flex: 1,
         paddingVertical: 10,
       },
-      navText: { color: theme.text, fontSize: 11, fontWeight: '900' as const, letterSpacing: 1, textAlign: 'center' as const },
+      navText: { color: theme.text, ...typeScale.meta },
     }),
     [theme],
   );
@@ -100,16 +100,33 @@ function NavButton({
   );
 }
 
+/** Theme-aware panel: background/border/title/body resolve from the active skin. */
 export function Panel({ children }: { children: React.ReactNode }) {
-  return <View style={styles.panel}>{children}</View>;
+  const { theme } = useSkins();
+  return (
+    <View
+      style={{
+        backgroundColor: theme.panel,
+        borderColor: theme.border,
+        borderRadius: theme.radius,
+        borderWidth: theme.borderWidth,
+        gap: 8,
+        padding: theme.space,
+      }}
+    >
+      {children}
+    </View>
+  );
 }
 
 export function PanelTitle({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.panelTitle}>{children}</Text>;
+  const { theme } = useSkins();
+  return <Text style={{ color: theme.accent, ...typeScale.metaBold }}>{children}</Text>;
 }
 
 export function BodyText({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.body}>{children}</Text>;
+  const { theme } = useSkins();
+  return <Text style={{ color: theme.text, ...typeScale.body }}>{children}</Text>;
 }
 
 export const styles = StyleSheet.create({
@@ -122,31 +139,10 @@ export const styles = StyleSheet.create({
   },
   fixtureText: {
     color: tokens.black,
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 1,
+    ...typeScale.meta,
   },
   content: {
     gap: tokens.space,
     padding: tokens.space,
-  },
-  panel: {
-    backgroundColor: tokens.panel,
-    borderColor: tokens.border,
-    borderRadius: tokens.radius,
-    borderWidth: tokens.borderWidth,
-    gap: 8,
-    padding: tokens.space,
-  },
-  panelTitle: {
-    color: tokens.accent,
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  body: {
-    color: tokens.text,
-    fontSize: 15,
-    lineHeight: 22,
   },
 });

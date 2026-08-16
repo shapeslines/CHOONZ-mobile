@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { phaseOf, type FightWorkflowState } from '@/lib/fight-machine';
 import type { FightAction, Loadout, MatchResult, MatchState, Toon } from '@/lib/types';
 import { useFight } from '@/providers/fight-provider';
+import { useSkins } from '@/providers/skin-provider';
 import { AppScreen, BodyText, Panel, PanelTitle } from '@/ui/app-screen';
 import { tokens } from '@/ui/tokens';
 
@@ -531,20 +532,24 @@ function HudFighter({
   meter: number;
   rounds: number;
 }) {
+  const { theme } = useSkins();
   return (
     <View accessibilityLabel={`hud-${label.toLowerCase()}`} style={styles.hudFighter}>
-      <Text style={styles.hudLabel}>{label} / HP {Math.round(hp)} / R{rounds}</Text>
-      <Meter value={hp / 100} color={tokens.danger} />
-      <Text style={styles.hudLabel}>METER {Math.round(meter * 100)}%</Text>
-      <Meter value={meter} color={tokens.accent} />
+      <Text style={[styles.hudLabel, { color: theme.text }]}>
+        {label} / HP {Math.round(hp)} / R{rounds}
+      </Text>
+      <Meter value={hp / 100} color={theme.danger} />
+      <Text style={[styles.hudLabel, { color: theme.text }]}>METER {Math.round(meter * 100)}%</Text>
+      <Meter value={meter} color={theme.accent} />
     </View>
   );
 }
 
 function Meter({ value, color }: { value: number; color: string }) {
+  const { theme } = useSkins();
   const width = `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%` as `${number}%`;
   return (
-    <View style={styles.meterTrack}>
+    <View style={[styles.meterTrack, { backgroundColor: theme.panelStrong }]}>
       <View style={[styles.meterFill, { backgroundColor: color, width }]} />
     </View>
   );
@@ -569,6 +574,7 @@ function Control({
   onPress: () => void;
   children: React.ReactNode;
 }) {
+  const { theme } = useSkins();
   return (
     <Pressable
       accessibilityLabel={label}
@@ -577,14 +583,40 @@ function Control({
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.control,
-        tone === 'danger' ? styles.dangerControl : null,
-        selected ? styles.selectedControl : null,
-        disabled ? styles.disabledControl : null,
-        pressed && !disabled ? styles.pressedControl : null,
+        {
+          alignItems: 'center',
+          backgroundColor: theme.panelStrong,
+          borderColor: theme.border,
+          borderRadius: theme.radius,
+          borderWidth: theme.borderWidth,
+          flexGrow: 1,
+          justifyContent: 'center',
+          minHeight: 42,
+          paddingHorizontal: 10,
+          paddingVertical: 9,
+        },
+        tone === 'danger'
+          ? { backgroundColor: theme.danger, borderColor: theme.black }
+          : null,
+        selected ? { backgroundColor: theme.accentAlt, borderColor: theme.accent } : null,
+        disabled ? { backgroundColor: theme.background, borderColor: theme.muted } : null,
+        pressed && !disabled ? { borderColor: theme.text } : null,
       ]}
     >
-      <Text style={[styles.controlText, tone === 'danger' ? styles.dangerControlText : null]}>{children}</Text>
+      <Text
+        style={[
+          {
+            color: theme.text,
+            fontSize: 12,
+            fontWeight: '900',
+            letterSpacing: 0.8,
+            textAlign: 'center',
+          },
+          tone === 'danger' ? { color: theme.black } : null,
+        ]}
+      >
+        {children}
+      </Text>
     </Pressable>
   );
 }

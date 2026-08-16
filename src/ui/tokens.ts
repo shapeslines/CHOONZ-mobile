@@ -6,6 +6,27 @@ export const gels = {
   sodium: { hot: '#E08818', mid: '#6E4408', deep: '#140C02' },
 } as const;
 
+/** House type stack (OFL, bundled under assets/fonts). */
+export const fonts = {
+  display: 'ArchivoBlack',
+  body: 'Inter',
+  bodySemi: 'Inter-SemiBold',
+  bodyBlack: 'Inter-Black',
+  mono: 'JetBrainsMono',
+  monoBold: 'JetBrainsMono-Bold',
+} as const;
+
+/** Type scale: display / heading / body / meta-mono (wide tracking for mono). */
+export const typeScale = {
+  display: { fontFamily: fonts.display, fontSize: 32, letterSpacing: -1 },
+  heading: { fontFamily: fonts.bodyBlack, fontSize: 20, letterSpacing: 0.5 },
+  body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22 },
+  bodySemi: { fontFamily: fonts.bodySemi, fontSize: 15, lineHeight: 22 },
+  label: { fontFamily: fonts.bodyBlack, fontSize: 12, letterSpacing: 1 },
+  meta: { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 2 },
+  metaBold: { fontFamily: fonts.monoBold, fontSize: 11, letterSpacing: 2 },
+} as const;
+
 export const tokens = {
   background: gels.blue.deep,
   panel: gels.uv.deep,
