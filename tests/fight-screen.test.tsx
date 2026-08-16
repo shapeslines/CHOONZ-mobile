@@ -143,7 +143,10 @@ describe('FightContent rendered states', () => {
     const view = await render(<FightContent {...props} />);
 
     expect(view.getByLabelText('hud-p1')).toBeTruthy();
-    expect(view.getByText('TIMER 124 · COMBO 2 · ROUND CALL')).toBeTruthy();
+    expect(view.getByText('TIMER 124 · COMBO 2 · ROUND CALL · LEAD P1')).toBeTruthy();
+    expect(view.getByLabelText('scene-rooftop')).toBeTruthy();
+    expect(view.getByText('BAR 1/7')).toBeTruthy();
+    expect(view.getByText('POSE HEAVY / F4')).toBeTruthy();
     const announcement = view.getByText('ROUND CALL');
     expect(announcement.props.role).toBe('status');
     expect(announcement.props.accessibilityLiveRegion).toBe('polite');
