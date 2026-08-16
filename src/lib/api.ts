@@ -13,6 +13,7 @@ import {
   decodeMechanicsReplayReceipt,
   decodeMechanicsScenarioDetail,
   decodeMechanicsScenarioList,
+  decodeSkinCatalog,
   decodeStages,
   decodeToon,
   decodeToons,
@@ -27,6 +28,7 @@ import {
   fixtureGels,
   fixtureHealth,
   fixtureKits,
+  fixtureSkinCatalog,
   fixtureStages,
   fixtureUser,
 } from '@/lib/fixtures';
@@ -53,6 +55,7 @@ import type {
   MechanicsScenarioDetail,
   MechanicsScenarioList,
   Stage,
+  SkinCatalog,
   Toon,
   ToonCreateInput,
   UserUpdateInput,
@@ -83,6 +86,8 @@ export interface ChoonzApi {
   getFighters(): Promise<Fighter[]>;
   getStages(): Promise<Stage[]>;
   getKits(): Promise<FighterKit[]>;
+  getSkins(): Promise<SkinCatalog>;
+  deleteAccount(): Promise<void>;
   getToons(): Promise<Toon[]>;
   createToon(input: ToonCreateInput): Promise<Toon>;
   getLoadouts(): Promise<Loadout[]>;
@@ -208,6 +213,30 @@ export class ChoonzApiClient implements ChoonzApi {
 
   getKits(): Promise<FighterKit[]> {
     return this.fromMode('/catalog/kits', decodeKits, fixtureKits, true);
+  }
+
+  getSkins(): Promise<SkinCatalog> {
+    return this.fromMode('/catalog/skins', decodeSkinCatalog, fixtureSkinCatalog, true);
+  }
+
+  deleteAccount(): Promise<void> {
+    // Store-policy C1: in-app account deletion. Fixture mode fails closed —
+    // deletion is a live-account action.
+    return this.fromMode(
+      '/me',
+      null,
+      async () => {
+        throw new ChoonzClientError(
+          'response',
+          'Account deletion requires a live API session.',
+          403,
+        );
+      },
+      true,
+      'DELETE',
+      { confirm: true },
+      204,
+    );
   }
 
   getToons(): Promise<Toon[]> {

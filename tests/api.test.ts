@@ -235,7 +235,7 @@ describe('CHOONZ API client', () => {
 });
 
 // --------------------------------------------------------------------------- //
-// Mechanics lab (ARC677 P3) — API-only, fail-closed client boundary.
+// Mechanics lab (ARC677 P3) â€” API-only, fail-closed client boundary.
 // --------------------------------------------------------------------------- //
 
 const mechanicsIdentity = {
@@ -495,5 +495,41 @@ describe('CHOONZ mechanics lab client', () => {
       fetcher: async () => new Response('not json', { status: 200 }),
     });
     await expect(malformed.getMechanicsScenarios()).rejects.toThrow(ChoonzClientError);
+  });
+
+  it('deletes the account with a typed confirm body and 204 contract', async () => {
+    let receivedInput = '';
+    const client = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'access-token',
+      fetcher: async (_input, init) => {
+        receivedInput = String(init?.body ?? '');
+        return new Response(null, { status: 204 });
+      },
+    });
+
+    await expect(client.deleteAccount()).resolves.toBeUndefined();
+    expect(receivedInput).toBe(JSON.stringify({ confirm: true }));
+  });
+
+  it('fails closed for account deletion in fixture mode', async () => {
+    const fixtureConfig = resolveAppConfig({ EXPO_PUBLIC_CHOONZ_MODE: 'fixtures' }, true);
+    const client = new ChoonzApiClient({
+      config: fixtureConfig,
+      getAccessToken: async () => null,
+    });
+    await expect(client.deleteAccount()).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('decodes the skins catalog in fixture mode', async () => {
+    const fixtureConfig = resolveAppConfig({ EXPO_PUBLIC_CHOONZ_MODE: 'fixtures' }, true);
+    const client = new ChoonzApiClient({
+      config: fixtureConfig,
+      getAccessToken: async () => null,
+    });
+    const catalog = await client.getSkins();
+    expect(catalog.schema_version).toBe('1.0');
+    expect(catalog.skins).toHaveLength(12);
+    expect(catalog.skins.find((skin) => skin.id === 'gel:sodium')?.default).toBe(true);
   });
 });

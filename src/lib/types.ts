@@ -337,3 +337,30 @@ export interface MechanicsReplayReceipt extends MechanicsCorpusIdentity {
   diffs: MechanicsDiffRecord[];
   verdict: MechanicsVerdict;
 }
+
+export type SkinKind = 'ui_theme' | 'scene_vibe' | 'character';
+export type SkinEntitlement = 'free' | 'earnable' | 'iap';
+export type SkinStatus = 'built' | 'planned';
+
+export interface SkinSummary {
+  id: string;
+  kind: SkinKind;
+  display_name: string;
+  description: string;
+  entitlement: SkinEntitlement;
+  base_gel: string;
+  default: boolean;
+  status: SkinStatus;
+}
+
+export interface SkinCatalog {
+  schema_version: string;
+  catalog_hash: string;
+  count: number;
+  skins: SkinSummary[];
+}
+
+export interface Skin extends SkinSummary {
+  palette: Record<string, string>;
+  asset_refs: string[];
+}
