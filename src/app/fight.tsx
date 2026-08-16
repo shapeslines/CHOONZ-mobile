@@ -6,7 +6,7 @@ import type { FightAction, Loadout, MatchResult, MatchState, Toon } from '@/lib/
 import { useFight } from '@/providers/fight-provider';
 import { useSkins } from '@/providers/skin-provider';
 import { AppScreen, BodyText, Panel, PanelTitle } from '@/ui/app-screen';
-import { tokens } from '@/ui/tokens';
+import { fonts, gels, tokens, typeScale } from '@/ui/tokens';
 
 export interface FightContentProps {
   accessEnabled: boolean;
@@ -494,6 +494,7 @@ function CancelledPanel({ disabled, onSetup }: { disabled: boolean; onSetup: () 
 }
 
 function Hud({ state }: { state: MatchState | null }) {
+  const { theme } = useSkins();
   if (!state) {
     return (
       <Panel>
@@ -505,19 +506,85 @@ function Hud({ state }: { state: MatchState | null }) {
   return (
     <Panel>
       <PanelTitle>AUTHORITATIVE HUD / STEP {state.last_step}</PanelTitle>
+      <SceneBand stageId={state.stage_id} />
       <View style={styles.hudGrid}>
-        <HudFighter label="P1" hp={state.p1.hp} meter={state.p1.meter} rounds={state.p1.rounds} />
-        <HudFighter label="P2" hp={state.p2.hp} meter={state.p2.meter} rounds={state.p2.rounds} />
+        <HudFighter
+          label="P1"
+          hp={state.p1.hp}
+          meter={state.p1.meter}
+          rounds={state.p1.rounds}
+          pose={state.p1.pose}
+          frame={state.p1.frame}
+          gel={state.p1_gel}
+        />
+        <HudFighter
+          label="P2"
+          hp={state.p2.hp}
+          meter={state.p2.meter}
+          rounds={state.p2.rounds}
+          pose={state.p2.pose}
+          frame={state.p2.frame}
+          gel={state.p2_gel}
+        />
       </View>
-      <BodyText>
-        TIMER {state.timer} · COMBO {state.combo} · {state.ceremony.replace(/_/g, ' ').toUpperCase()}
-      </BodyText>
+      <BarReadout bar={state.bar} />
+      <Text style={[styles.hudMeta, { color: theme.text }]}>
+        TIMER {state.timer} · COMBO {state.combo} ·{' '}
+        {state.ceremony.replace(/_/g, ' ').toUpperCase()}
+        {state.leading ? ` · LEAD ${state.leading.toUpperCase()}` : ''}
+      </Text>
       {state.ann ? (
-        <Text accessibilityLiveRegion="polite" role="status" style={styles.announcement}>
+        <Text
+          accessibilityLiveRegion="polite"
+          role="status"
+          style={[styles.announcement, { color: theme.accent }]}
+        >
           {state.ann}
         </Text>
       ) : null}
     </Panel>
+  );
+}
+
+/** The stage presentation layer — a vibe band tinted by the active scene_vibe skin. */
+function SceneBand({ stageId }: { stageId: string }) {
+  const { theme, catalog, mySkins } = useSkins();
+  const vibeId = mySkins?.selection.scene_vibe;
+  const vibe = catalog?.skins.find((skin) => skin.id === vibeId);
+  const gel = vibe?.base_gel;
+  const palette = gel ? (gels as Record<string, { deep: string; hot: string }>)[gel] : undefined;
+  return (
+    <View
+      accessibilityLabel={`scene-${stageId}`}
+      style={[styles.sceneBand, { backgroundColor: palette?.deep ?? theme.background }]}
+    >
+      <Text style={[styles.sceneLabel, { color: palette?.hot ?? theme.accent }]}>
+        {stageId.replace(/_/g, ' ').toUpperCase()}
+        {vibe ? ` · ${vibe.display_name.toUpperCase()}` : ''}
+      </Text>
+    </View>
+  );
+}
+
+/** Ceremony progress as eight segments (state.bar, 0..7). */
+function BarReadout({ bar }: { bar: number }) {
+  const { theme } = useSkins();
+  return (
+    <View style={styles.barRow}>
+      {Array.from({ length: 8 }, (_, index) => (
+        <View
+          key={index}
+          style={[
+            styles.barSegment,
+            {
+              backgroundColor: index < bar ? theme.accent : theme.panelStrong,
+              borderColor: theme.border,
+            },
+          ]}
+        />
+      ))}
+      <Text style={[styles.hudMeta, { color: theme.muted }]}>BAR {bar}/7</Text>
+    </View>
   );
 }
 
@@ -526,21 +593,38 @@ function HudFighter({
   hp,
   meter,
   rounds,
+  pose,
+  frame,
+  gel,
 }: {
   label: string;
   hp: number;
   meter: number;
   rounds: number;
+  pose: string | null;
+  frame: number | null;
+  gel: string;
 }) {
   const { theme } = useSkins();
+  const palette = (gels as Record<string, { hot: string; mid: string }>)[gel] ?? {
+    hot: theme.accent,
+    mid: theme.panelStrong,
+  };
+  const critical = hp < 25;
   return (
     <View accessibilityLabel={`hud-${label.toLowerCase()}`} style={styles.hudFighter}>
       <Text style={[styles.hudLabel, { color: theme.text }]}>
         {label} / HP {Math.round(hp)} / R{rounds}
       </Text>
-      <Meter value={hp / 100} color={theme.danger} />
+      <Meter value={hp / 100} color={critical ? theme.danger : palette.hot} />
       <Text style={[styles.hudLabel, { color: theme.text }]}>METER {Math.round(meter * 100)}%</Text>
-      <Meter value={meter} color={theme.accent} />
+      <Meter value={meter} color={palette.mid} />
+      {pose ? (
+        <Text style={[styles.hudMeta, { color: theme.muted }]}>
+          POSE {pose.toUpperCase()}
+          {frame !== null ? ` / F${frame}` : ''}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -707,10 +791,10 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   hudLabel: {
-    color: tokens.text,
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.5,
+    ...typeScale.meta,
+  },
+  hudMeta: {
+    ...typeScale.meta,
   },
   meterTrack: {
     backgroundColor: tokens.black,
@@ -724,9 +808,29 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   announcement: {
-    color: tokens.accent,
-    fontSize: 15,
-    fontWeight: '900',
-    letterSpacing: 1,
+    fontFamily: fonts.monoBold,
+    fontSize: 14,
+    letterSpacing: 1.5,
+    lineHeight: 20,
+  },
+  sceneBand: {
+    alignItems: 'center',
+    borderColor: tokens.border,
+    borderWidth: tokens.borderWidth,
+    paddingHorizontal: tokens.space,
+    paddingVertical: 7,
+  },
+  sceneLabel: {
+    ...typeScale.meta,
+  },
+  barRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  barSegment: {
+    borderWidth: tokens.borderWidth,
+    flex: 1,
+    height: 8,
   },
 });
