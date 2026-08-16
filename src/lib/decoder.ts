@@ -28,6 +28,9 @@ import type {
   MechanicsScenarioList,
   MechanicsScenarioSummary,
   MechanicsVerdict,
+  Skin,
+  SkinCatalog,
+  SkinSummary,
   SoundEvent,
   Stage,
   Toon,
@@ -621,5 +624,49 @@ export function decodeMechanicsReplayReceipt(value: unknown): MechanicsReplayRec
     ),
     diffs: array(input.diffs, 'replay receipt.diffs').map(decodeMechanicsDiffRecord),
     verdict: mechanicsVerdict(input.verdict, 'replay receipt.verdict'),
+  };
+}
+
+const skinKinds = ['ui_theme', 'scene_vibe', 'character'] as const;
+const skinEntitlements = ['free', 'earnable', 'iap'] as const;
+const skinStatuses = ['built', 'planned'] as const;
+
+export function decodeSkinSummary(value: unknown): SkinSummary {
+  const input = record(value, 'skin');
+  return {
+    id: string(input.id, 'skin.id'),
+    kind: literal(input.kind, skinKinds, 'skin.kind'),
+    display_name: string(input.display_name, 'skin.display_name'),
+    description: string(input.description, 'skin.description'),
+    entitlement: literal(input.entitlement, skinEntitlements, 'skin.entitlement'),
+    base_gel: string(input.base_gel, 'skin.base_gel'),
+    default: boolean(input.default, 'skin.default'),
+    status: literal(input.status, skinStatuses, 'skin.status'),
+  };
+}
+
+export function decodeSkinCatalog(value: unknown): SkinCatalog {
+  const input = record(value, 'skin catalog');
+  const skins = array(input.skins, 'skin catalog.skins').map((item, index) =>
+    decodeSkinSummary(item),
+  );
+  return {
+    schema_version: string(input.schema_version, 'skin catalog.schema_version'),
+    catalog_hash: string(input.catalog_hash, 'skin catalog.catalog_hash'),
+    count: integer(input.count, 'skin catalog.count'),
+    skins,
+  };
+}
+
+export function decodeSkin(value: unknown): Skin {
+  const input = record(value, 'skin detail');
+  const summary = decodeSkinSummary(input);
+  const paletteInput = record(input.palette, 'skin detail.palette');
+  return {
+    ...summary,
+    palette: Object.fromEntries(
+      Object.entries(paletteInput).map(([key, item]) => [key, string(item, `skin detail.palette.${key}`)]),
+    ),
+    asset_refs: stringArray(input.asset_refs, 'skin detail.asset_refs'),
   };
 }

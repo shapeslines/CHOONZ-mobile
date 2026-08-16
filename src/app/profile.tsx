@@ -42,6 +42,15 @@ export interface ProfileContentProps {
   onRequestSignOut: () => void;
   onCancelSignOut: () => void;
   onConfirmSignOut: () => void;
+  canDeleteAccount: boolean;
+  deleteConfirming: boolean;
+  deleteTypedConfirm: string;
+  onDeleteTypedConfirmChange: (value: string) => void;
+  deleting: boolean;
+  deleteError: string | null;
+  onRequestDelete: () => void;
+  onCancelDelete: () => void;
+  onConfirmDelete: () => void;
 }
 
 export function ProfileContent({
@@ -63,6 +72,15 @@ export function ProfileContent({
   onRequestSignOut,
   onCancelSignOut,
   onConfirmSignOut,
+  canDeleteAccount,
+  deleteConfirming,
+  deleteTypedConfirm,
+  onDeleteTypedConfirmChange,
+  deleting,
+  deleteError,
+  onRequestDelete,
+  onCancelDelete,
+  onConfirmDelete,
 }: ProfileContentProps) {
   const tooLong = displayName.trim().length > 120;
   return (
@@ -156,6 +174,69 @@ export function ProfileContent({
           {signOutError ? <Text style={styles.error}>{signOutError}</Text> : null}
         </Panel>
       ) : null}
+
+      {canDeleteAccount ? (
+        <Panel>
+          <PanelTitle>DELETE ACCOUNT</PanelTitle>
+          <BodyText>
+            Permanently deletes this CHOONZ account and all of its data (toons, matches,
+            series, loadouts, kits, scenes, connections) on the server. This cannot be undone.
+          </BodyText>
+          {deleteConfirming ? (
+            <>
+              <Text style={styles.warning}>
+                Type DELETE MY ACCOUNT to confirm permanent deletion.
+              </Text>
+              <TextInput
+                accessibilityLabel="delete-account-confirm"
+                autoCapitalize="characters"
+                onChangeText={onDeleteTypedConfirmChange}
+                placeholder="DELETE MY ACCOUNT"
+                placeholderTextColor={tokens.muted}
+                style={styles.input}
+                value={deleteTypedConfirm}
+              />
+              <View style={styles.row}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="cancel-delete-account"
+                  disabled={deleting}
+                  onPress={onCancelDelete}
+                  style={styles.secondaryButton}
+                >
+                  <Text style={styles.secondaryButtonText}>CANCEL</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="confirm-delete-account"
+                  disabled={deleting || deleteTypedConfirm !== 'DELETE MY ACCOUNT'}
+                  onPress={onConfirmDelete}
+                  style={[
+                    styles.dangerButton,
+                    deleting || deleteTypedConfirm !== 'DELETE MY ACCOUNT'
+                      ? styles.buttonDisabled
+                      : null,
+                  ]}
+                >
+                  <Text style={styles.buttonText}>
+                    {deleting ? 'DELETING…' : 'DELETE ACCOUNT'}
+                  </Text>
+                </Pressable>
+              </View>
+            </>
+          ) : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="request-delete-account"
+              onPress={onRequestDelete}
+              style={styles.dangerButton}
+            >
+              <Text style={styles.buttonText}>DELETE ACCOUNT</Text>
+            </Pressable>
+          )}
+          {deleteError ? <Text style={styles.error}>{deleteError}</Text> : null}
+        </Panel>
+      ) : null}
     </>
   );
 }
@@ -172,6 +253,10 @@ export default function ProfileScreen() {
   const [signOutConfirming, setSignOutConfirming] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [deleteTypedConfirm, setDeleteTypedConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const queryScope = protectedQueryScope(auth.status, auth.user?.id);
   const meKey = accountQueryKey(queryScope ?? 'inactive', 'me');
   const me = useQuery({
@@ -220,6 +305,23 @@ export default function ProfileScreen() {
     }
   };
 
+  const deleteAccount = async () => {
+    setDeleteError(null);
+    setDeleting(true);
+    try {
+      await api.deleteAccount();
+      // The account is gone server-side; finalize the local session.
+      await auth.signOut();
+      queryClient.clear();
+    } catch (reason) {
+      setDeleteError(errorMessage(reason));
+    } finally {
+      setDeleting(false);
+      setDeleteConfirming(false);
+      setDeleteTypedConfirm('');
+    }
+  };
+
   const accessEnabled = auth.status === 'fixture' || auth.status === 'authenticated';
   const modeLabel =
     auth.status === 'fixture'
@@ -248,6 +350,18 @@ export default function ProfileScreen() {
           onRequestSignOut={() => setSignOutConfirming(true)}
           onCancelSignOut={() => setSignOutConfirming(false)}
           onConfirmSignOut={() => void signOut()}
+          canDeleteAccount={auth.status === 'authenticated'}
+          deleteConfirming={deleteConfirming}
+          deleteTypedConfirm={deleteTypedConfirm}
+          onDeleteTypedConfirmChange={setDeleteTypedConfirm}
+          deleting={deleting}
+          deleteError={deleteError}
+          onRequestDelete={() => setDeleteConfirming(true)}
+          onCancelDelete={() => {
+            setDeleteConfirming(false);
+            setDeleteTypedConfirm('');
+          }}
+          onConfirmDelete={() => void deleteAccount()}
         />
       ) : null}
 
