@@ -364,3 +364,25 @@ export interface Skin extends SkinSummary {
   palette: Record<string, string>;
   asset_refs: string[];
 }
+
+export interface SkinGrant {
+  skin_id: string;
+  source: SkinEntitlement;
+  granted_at: string;
+}
+
+export interface SkinSelection {
+  ui_theme: string;
+  scene_vibe: string;
+  character: string;
+}
+
+export interface MySkins {
+  owned: SkinGrant[];
+  selection: SkinSelection;
+}
+
+export interface SkinSelectionUpdateInput {
+  kind: SkinKind;
+  skin_id: string;
+}

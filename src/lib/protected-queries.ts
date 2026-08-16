@@ -46,3 +46,7 @@ export async function clearProtectedQueries(
     queryClient.removeQueries({ queryKey: PROTECTED_QUERY_PREFIX });
   }
 }
+
+export function mySkinsQueryKey(scope: string): readonly string[] {
+  return protectedQueryKey(scope, 'skins');
+}

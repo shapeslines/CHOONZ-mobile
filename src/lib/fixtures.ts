@@ -7,6 +7,7 @@ import type {
   Gel,
   Health,
   Loadout,
+  MySkins,
   SkinCatalog,
   Stage,
   Toon,
@@ -220,4 +221,13 @@ export const fixtureSkinCatalog: SkinCatalog = {
     { id: 'char:rex-stock', kind: 'character', display_name: 'REX', description: 'Stock REX look (no asset pack required).', entitlement: 'free', base_gel: 'sodium', default: true, status: 'built' },
     { id: 'char:vex-stock', kind: 'character', display_name: 'VEX', description: 'Stock VEX look (no asset pack required).', entitlement: 'free', base_gel: 'sodium', default: true, status: 'built' },
   ],
+};
+
+export const fixtureMySkins: MySkins = {
+  owned: [],
+  selection: {
+    ui_theme: 'gel:sodium',
+    scene_vibe: 'vibe:rooftop',
+    character: 'char:axel-stock',
+  },
 };

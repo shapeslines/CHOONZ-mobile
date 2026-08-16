@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { decodeSkinCatalog, decodeSkin, decodeSkinSummary } from '../src/lib/decoder';
-import { fixtureSkinCatalog } from '../src/lib/fixtures';
+import { decodeMySkins, decodeSkinCatalog, decodeSkin, decodeSkinSummary } from '../src/lib/decoder';
+import { fixtureMySkins, fixtureSkinCatalog } from '../src/lib/fixtures';
+import type { SkinSummary } from '../src/lib/types';
 import {
   defaultSkinId,
   gelPaletteTokens,
+  isOwned,
+  resolveLoadoutTheme,
   resolveThemeTokens,
+  skinsByKind,
   skinById,
 } from '../src/lib/skins';
 import { gels, tokens } from '../src/ui/tokens';
@@ -85,5 +89,64 @@ describe('skin registry', () => {
     expect(mapped.panelStrong).toBe('#MID');
     expect(mapped.accent).toBe('#HOT');
     expect(mapped.accentAlt).toBe('#MID');
+  });
+});
+
+describe('skin loadout (M-S2)', () => {
+  it('decodes MySkins strictly', () => {
+    const decoded = decodeMySkins({
+      owned: [{ skin_id: 'gel:gold', source: 'earnable', granted_at: '2026-08-16T00:00:00Z' }],
+      selection: { ui_theme: 'gel:red', scene_vibe: 'vibe:rooftop', character: 'char:axel-stock' },
+    });
+    expect(decoded.owned[0]?.skin_id).toBe('gel:gold');
+    expect(decoded.selection.ui_theme).toBe('gel:red');
+  });
+
+  it('rejects malformed loadouts fail-closed', () => {
+    expect(() =>
+      decodeMySkins({ owned: 'nope', selection: { ui_theme: 'x', scene_vibe: 'y', character: 'z' } }),
+    ).toThrow();
+    expect(() =>
+      decodeMySkins({
+        owned: [],
+        selection: { ui_theme: 'x', scene_vibe: 'y', character: 'z', extra: 1 },
+      }),
+    ).not.toThrow(); // extra fields are ignored, missing/typed fields are not
+    expect(() =>
+      decodeMySkins({ owned: [], selection: { ui_theme: 1, scene_vibe: 'y', character: 'z' } }),
+    ).toThrow();
+  });
+
+  it('resolves the theme from the loadout', () => {
+    const resolved = resolveLoadoutTheme(fixtureSkinCatalog, {
+      ui_theme: 'gel:red',
+      scene_vibe: 'vibe:rooftop',
+      character: 'char:axel-stock',
+    });
+    expect(resolved.background).toBe(gels.red.deep);
+    const defaults = resolveLoadoutTheme(fixtureSkinCatalog, {
+      ui_theme: 'gel:sodium',
+      scene_vibe: 'vibe:rooftop',
+      character: 'char:axel-stock',
+    });
+    expect(defaults).toEqual(tokens);
+    expect(resolveLoadoutTheme(fixtureSkinCatalog, undefined)).toEqual(tokens);
+  });
+
+  it('isOwned: free always, earnable/iap only with a grant', () => {
+    const free = fixtureSkinCatalog.skins.find((skin) => skin.id === 'gel:red');
+    expect(free && isOwned(free, undefined)).toBe(true);
+    const earnable: SkinSummary = {
+      id: 'gel:gold', kind: 'ui_theme', display_name: 'Gold', description: 'Earnable variant',
+      entitlement: 'earnable', base_gel: 'sodium', default: false, status: 'built',
+    };
+    expect(isOwned(earnable, undefined)).toBe(false);
+    expect(isOwned(earnable, { owned: [{ skin_id: 'gel:gold', source: 'earnable', granted_at: '' }], selection: fixtureMySkins.selection })).toBe(true);
+  });
+
+  it('groups skins by kind', () => {
+    expect(skinsByKind(fixtureSkinCatalog, 'ui_theme')).toHaveLength(5);
+    expect(skinsByKind(fixtureSkinCatalog, 'character')).toHaveLength(5);
+    expect(skinsByKind(fixtureSkinCatalog, 'scene_vibe')).toHaveLength(2);
   });
 });
