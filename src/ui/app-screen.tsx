@@ -1,22 +1,20 @@
 import { Link, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fixtureDataLabel } from '@/lib/config';
+import { useSkins } from '@/providers/skin-provider';
 import { useRuntimeConfig } from '@/providers/runtime-config-provider';
 import { tokens } from '@/ui/tokens';
 
-function NavButton({ href, label }: { href: Href; label: string }) {
-  return (
-    <Link href={href} asChild>
-      <Pressable accessibilityLabel={label} style={styles.navButton}>
-        <Text style={styles.navText}>{label}</Text>
-      </Pressable>
-    </Link>
-  );
-}
-
+/**
+ * The app shell. Surface colors (background, header border, wordmark, nav)
+ * resolve from the active ui_theme skin via the SkinProvider (M-S2); the
+ * default skin equals the static tokens, so nothing changes until a user
+ * selects a different gel theme.
+ */
 export function AppScreen({
   title,
   children,
@@ -25,14 +23,45 @@ export function AppScreen({
   children: React.ReactNode;
 }) {
   const config = useRuntimeConfig();
+  const { theme } = useSkins();
   const label = fixtureDataLabel(config);
+  const themed = useMemo(
+    () => ({
+      safeArea: { flex: 1, backgroundColor: theme.background },
+      header: {
+        borderBottomColor: theme.border,
+        borderBottomWidth: theme.borderWidth,
+        paddingHorizontal: theme.space,
+        paddingVertical: theme.space,
+      },
+      wordmark: { color: theme.accent, fontSize: 13, fontWeight: '900' as const, letterSpacing: 2 },
+      title: { color: theme.text, fontSize: 28, fontWeight: '900' as const, letterSpacing: 1 },
+      nav: {
+        borderTopColor: theme.border,
+        borderTopWidth: theme.borderWidth,
+        flexDirection: 'row' as const,
+        gap: 6,
+        padding: 8,
+      },
+      navButton: {
+        backgroundColor: theme.panelStrong,
+        borderColor: theme.border,
+        borderRadius: theme.radius,
+        borderWidth: theme.borderWidth,
+        flex: 1,
+        paddingVertical: 10,
+      },
+      navText: { color: theme.text, fontSize: 11, fontWeight: '900' as const, letterSpacing: 1, textAlign: 'center' as const },
+    }),
+    [theme],
+  );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={themed.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar style="light" />
-      <View style={styles.header}>
-        <Text style={styles.wordmark}>CHOONZ</Text>
-        <Text style={styles.title}>{title}</Text>
+      <View style={themed.header}>
+        <Text style={themed.wordmark}>CHOONZ</Text>
+        <Text style={themed.title}>{title}</Text>
       </View>
       {label ? (
         <View accessibilityLabel="fixture-data-label" style={styles.fixtureLabel}>
@@ -40,13 +69,34 @@ export function AppScreen({
         </View>
       ) : null}
       <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
-      <View style={styles.nav}>
-        <NavButton href="/" label="STATUS" />
-        <NavButton href="/catalog" label="CATALOG" />
-        <NavButton href="/fight" label="FIGHT" />
-        <NavButton href="/profile" label="PROFILE" />
+      <View style={themed.nav}>
+        <NavButton href="/" label="STATUS" style={themed.navButton} textStyle={themed.navText} />
+        <NavButton href="/catalog" label="CATALOG" style={themed.navButton} textStyle={themed.navText} />
+        <NavButton href="/skins" label="SKINS" style={themed.navButton} textStyle={themed.navText} />
+        <NavButton href="/fight" label="FIGHT" style={themed.navButton} textStyle={themed.navText} />
+        <NavButton href="/profile" label="PROFILE" style={themed.navButton} textStyle={themed.navText} />
       </View>
     </SafeAreaView>
+  );
+}
+
+function NavButton({
+  href,
+  label,
+  style,
+  textStyle,
+}: {
+  href: Href;
+  label: string;
+  style: object;
+  textStyle: object;
+}) {
+  return (
+    <Link href={href} asChild>
+      <Pressable accessibilityLabel={label} style={style}>
+        <Text style={textStyle}>{label}</Text>
+      </Pressable>
+    </Link>
   );
 }
 
@@ -63,28 +113,6 @@ export function BodyText({ children }: { children: React.ReactNode }) {
 }
 
 export const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: tokens.background,
-  },
-  header: {
-    borderBottomColor: tokens.border,
-    borderBottomWidth: tokens.borderWidth,
-    paddingHorizontal: tokens.space,
-    paddingVertical: tokens.space,
-  },
-  wordmark: {
-    color: tokens.accent,
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 2,
-  },
-  title: {
-    color: tokens.text,
-    fontSize: 28,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
   fixtureLabel: {
     backgroundColor: tokens.accent,
     borderBottomColor: tokens.black,
@@ -120,27 +148,5 @@ export const styles = StyleSheet.create({
     color: tokens.text,
     fontSize: 15,
     lineHeight: 22,
-  },
-  nav: {
-    borderTopColor: tokens.border,
-    borderTopWidth: tokens.borderWidth,
-    flexDirection: 'row',
-    gap: 6,
-    padding: 8,
-  },
-  navButton: {
-    backgroundColor: tokens.panelStrong,
-    borderColor: tokens.border,
-    borderRadius: tokens.radius,
-    borderWidth: tokens.borderWidth,
-    flex: 1,
-    paddingVertical: 10,
-  },
-  navText: {
-    color: tokens.text,
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textAlign: 'center',
   },
 });

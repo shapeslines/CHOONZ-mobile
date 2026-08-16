@@ -1,5 +1,5 @@
 import { gels, tokens } from '@/ui/tokens';
-import type { SkinCatalog, SkinKind, SkinSummary } from '@/lib/types';
+import type { MySkins, SkinCatalog, SkinKind, SkinSelection, SkinSummary } from '@/lib/types';
 
 /**
  * M-S1 skin registry (docs/skins.md).
@@ -77,4 +77,25 @@ export function resolveThemeTokens(
     return tokens;
   }
   return gelPaletteTokens(palette);
+}
+
+/** Resolve the theme from a user's loadout (M-S2). */
+export function resolveLoadoutTheme(
+  catalog: SkinCatalog,
+  selection: SkinSelection | undefined,
+): ResolvedThemeTokens {
+  return resolveThemeTokens(catalog, selection?.ui_theme);
+}
+
+/** True when the skin is selectable: free, or present in the owned grants. */
+export function isOwned(skin: SkinSummary, mySkins: MySkins | undefined): boolean {
+  if (skin.entitlement === 'free') {
+    return true;
+  }
+  return (mySkins?.owned ?? []).some((grant) => grant.skin_id === skin.id);
+}
+
+/** Skins of one kind, grouped in catalog order. */
+export function skinsByKind(catalog: SkinCatalog, kind: SkinKind): SkinSummary[] {
+  return catalog.skins.filter((skin) => skin.kind === kind);
 }

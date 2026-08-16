@@ -7,6 +7,7 @@ import { ApiProvider } from '@/providers/api-provider';
 import { AuthProvider } from '@/providers/auth-provider';
 import { FightProvider } from '@/providers/fight-provider';
 import { RuntimeConfigProvider } from '@/providers/runtime-config-provider';
+import { SkinProvider } from '@/providers/skin-provider';
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -27,7 +28,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         <QueryClientProvider client={queryClient}>
           <AuthProvider config={appConfig}>
             <ApiProvider>
-              <FightProvider>{children}</FightProvider>
+              <SkinProvider>
+                <FightProvider>{children}</FightProvider>
+              </SkinProvider>
             </ApiProvider>
           </AuthProvider>
         </QueryClientProvider>

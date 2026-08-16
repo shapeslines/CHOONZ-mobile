@@ -28,6 +28,7 @@ import type {
   MechanicsScenarioList,
   MechanicsScenarioSummary,
   MechanicsVerdict,
+  MySkins,
   Skin,
   SkinCatalog,
   SkinSummary,
@@ -668,5 +669,26 @@ export function decodeSkin(value: unknown): Skin {
       Object.entries(paletteInput).map(([key, item]) => [key, string(item, `skin detail.palette.${key}`)]),
     ),
     asset_refs: stringArray(input.asset_refs, 'skin detail.asset_refs'),
+  };
+}
+
+export function decodeMySkins(value: unknown): MySkins {
+  const input = record(value, 'my skins');
+  const owned = array(input.owned, 'my skins.owned').map((item, index) => {
+    const grant = record(item, `my skins.owned[${index}]`);
+    return {
+      skin_id: string(grant.skin_id, `my skins.owned[${index}].skin_id`),
+      source: literal(grant.source, skinEntitlements, `my skins.owned[${index}].source`),
+      granted_at: string(grant.granted_at, `my skins.owned[${index}].granted_at`),
+    };
+  });
+  const selectionInput = record(input.selection, 'my skins.selection');
+  return {
+    owned,
+    selection: {
+      ui_theme: string(selectionInput.ui_theme, 'my skins.selection.ui_theme'),
+      scene_vibe: string(selectionInput.scene_vibe, 'my skins.selection.scene_vibe'),
+      character: string(selectionInput.character, 'my skins.selection.character'),
+    },
   };
 }

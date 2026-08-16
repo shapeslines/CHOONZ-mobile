@@ -13,6 +13,7 @@ import {
   decodeMechanicsReplayReceipt,
   decodeMechanicsScenarioDetail,
   decodeMechanicsScenarioList,
+  decodeMySkins,
   decodeSkinCatalog,
   decodeStages,
   decodeToon,
@@ -28,12 +29,14 @@ import {
   fixtureGels,
   fixtureHealth,
   fixtureKits,
+  fixtureMySkins,
   fixtureSkinCatalog,
   fixtureStages,
   fixtureUser,
 } from '@/lib/fixtures';
 import { normalizeApiBaseUrl, type RuntimeConfig } from '@/lib/config';
 import type {
+  SkinKind,
   CatalogMeta,
   ChoonzConnection,
   ChoonzUser,
@@ -54,8 +57,10 @@ import type {
   MechanicsReplayReceipt,
   MechanicsScenarioDetail,
   MechanicsScenarioList,
-  Stage,
+  MySkins,
   SkinCatalog,
+  SkinSelectionUpdateInput,
+  Stage,
   Toon,
   ToonCreateInput,
   UserUpdateInput,
@@ -87,6 +92,8 @@ export interface ChoonzApi {
   getStages(): Promise<Stage[]>;
   getKits(): Promise<FighterKit[]>;
   getSkins(): Promise<SkinCatalog>;
+  getMySkins(): Promise<MySkins>;
+  updateMySkins(input: SkinSelectionUpdateInput): Promise<MySkins>;
   deleteAccount(): Promise<void>;
   getToons(): Promise<Toon[]>;
   createToon(input: ToonCreateInput): Promise<Toon>;
@@ -217,6 +224,31 @@ export class ChoonzApiClient implements ChoonzApi {
 
   getSkins(): Promise<SkinCatalog> {
     return this.fromMode('/catalog/skins', decodeSkinCatalog, fixtureSkinCatalog, true);
+  }
+
+  getMySkins(): Promise<MySkins> {
+    return this.fromMode(
+      '/me/skins',
+      decodeMySkins,
+      () => Promise.resolve({ ...fixtureMySkins }),
+      true,
+    );
+  }
+
+  updateMySkins(input: SkinSelectionUpdateInput): Promise<MySkins> {
+    return this.fromMode(
+      '/me/skins',
+      decodeMySkins,
+      () => {
+        // Fixture mode applies the selection locally and returns the fixture loadout.
+        const next = { ...fixtureMySkins.selection } as Record<SkinKind, string>;
+        next[input.kind] = input.skin_id;
+        return Promise.resolve({ owned: [], selection: next });
+      },
+      true,
+      'PATCH',
+      input,
+    );
   }
 
   deleteAccount(): Promise<void> {
