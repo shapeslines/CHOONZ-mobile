@@ -1,80 +1,44 @@
-﻿# CHOONZ-mobile - agent access (AGENTS.md)
+﻿# AGENTS.md — CHOONZ-mobile
 
-Read first. Mobile client for CHOONZ.
+## 1. System Affinity & Boundaries
+- **Role:** Mobile client for the CHOONZ fighting-game platform (Expo Router + React Native + TypeScript).
+- **Owns:** Client combat UX, practice match state transitions, profile/connections UI, offline fixtures mode, scenario lab preview.
+- **Delegates:** Backend match authority and simulation to `shapeslines/CHOONZ`; shared design patterns to `Clubheavy-Mobile` and `Shapeslines-Mobile`.
+- **Invariants:** Use only `expo-router` imports for app navigation; never add direct `@react-navigation/*` dependencies. Worktree prefix `colony2/choonzm-<slug>`.
 
-## What this is
+## 2. Deterministic Verification Matrix
+- `npm ci` — install dependencies
+- `npm test` — run Vitest test suite
+- `npm run typecheck` — TypeScript type checking
+- `npm run lint` — ESLint
+- `npm run expo:check` — Expo configuration check
+- `npm run expo:doctor` — Expo environment doctor
+- `npm run build` — Web validation export build
+- Gate Rule: All tests + typecheck + lint must pass before merge.
 
-Expo Router + React Native client for the CHOONZ fighting-game backend
-(`shapeslines/CHOONZ`). The shipped review slice includes service status,
-authenticated identity, profile and connection management, the static combat
-catalog, the constrained P1 practice-match lifecycle, and a developer-only
-mechanics lab backed by the server's immutable scenario corpus.
+## 3. Inference Allocation Matrix
+- **Deep Inference Focus (Spend Tokens Here):**
+  - Combat frame simulation UX, touch hit-box responsiveness, and combat animation choreography.
+  - State machine error recovery (network drops during practice matches, token expiration during fight).
+  - Fixture vs API mode boundary transitions and fallback caching.
+- **Reflex / Low Inference (Deterministic Output):**
+  - Standard React Native component layouts, styling wrappers, and screen route declarations.
+  - TanStack Query hooks boilerplate and standard TypeScript interfaces.
+  - Supabase client auth state wiring.
 
-## Stack
+## 4. Public Environment & Invariant Contracts
+- `EXPO_PUBLIC_CHOONZ_MODE=fixtures|api` (defaults to `fixtures`).
+- `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configure public auth.
+- Never add service-role keys, private database URLs, or secret credentials to client-accessible bundles.
+- Honest-unavailable rule: When disconnected or backend unreachable, show explicit connection status badges rather than blank combat frames or zeroed damage stats.
 
-TypeScript / Expo SDK 57 / React Native 0.86 / React 19 / Expo Router /
-Supabase Auth / TanStack Query. Node 22+ is required. Routes live in `src/app`.
-Use only `expo-router` imports for app navigation; do not add direct
-`@react-navigation/*` app imports or dependencies.
+## 5. Self-Contained Invocation Harness
+When delegating tasks on this repo:
+1. Specify target slice (e.g. P1 match mutations vs P2 profile/connection flows).
+2. Explicit verification command (`npm test` / `npm run typecheck`).
+3. Include target mode (`fixtures` vs `api`).
 
-## Repository rules
-
-- **Branch+PR only** off `origin/main`; no direct commits to main.
-- **Worktree discipline**: `git worktree add .worktrees/<claim-id> origin/main -b colony2/choonzm-<slug>`. Never commit into the shared main checkout.
-- **CI**: workflows under `.github/workflows/`. PR turns green before merge.
-- **Colony branch prefix**: `colony2/choonzm-<slug>`.
-- **Backend dependency**: changes to CHOONZ backend API contract require a paired PR here.
-
-## Owner-gated (never auto-apply)
-
-- Production EAS Build / Store submission
-- Auth provider swap (Supabase project config)
-- Branch-protection rule changes
-- Force-push to any branch
-
-## Related lanes
-
-- Catalogue ingress material: `C:\Users\Carson\Desktop\grokprod2\ingress\02-choonz-fighting-game\`
+## Related Lanes & Canonical References
 - Backend repo: `shapeslines/CHOONZ`
-- Architecture reference: CHOONZ/ARCHITECTURE.md (cross-repo)
-- World-instantiation plan: `C:\Users\Carson\Desktop\PROCESSING\2026-08-09-world-instantiation-plan.md`
-
-## Public environment contract
-
-- `EXPO_PUBLIC_CHOONZ_MODE=fixtures|api`; development defaults to `fixtures`.
-  A production build with a missing or invalid mode, or API mode without a valid
-  API base URL, fails closed at the client boundary.
-- `EXPO_PUBLIC_CHOONZ_API_BASE_URL` is required only for `api` mode and must use
-  HTTPS in production. Development HTTP is limited to `localhost`, `127.0.0.1`,
-  or `[::1]`.
-- `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configure
-  Supabase Auth and follow the same transport rule. The primary key must begin
-  `sb_publishable_`; `EXPO_PUBLIC_SUPABASE_ANON_KEY` is only a decodable legacy
-  JWT with role `anon`, and never overrides an invalid primary key.
-- `EXPO_PUBLIC_*` values are visible in a shipped app. Never add a service-role,
-  secret key, database URL/password, or any private value to this project.
-
-## Verification
-
-- Install: `npm ci`
-- Tests: `npm test` (Vitest)
-- Type check: `npm run typecheck`
-- Lint: `npm run lint`
-- Expo config: `npm run expo:check`
-- Expo Doctor: `npm run expo:doctor`
-- Web build: `npm run build`
-
-## Conventions
-
-Follow `shapeslines/Clubheavy-Mobile` and `shapeslines/Shapeslines-Mobile` for
-directory layout, hook patterns, and adapter shape.
-
-This repository owns the mobile client for the bounded P1 match mutations and
-the P2 profile/connection calls. It does not own backend match authority,
-OAuth/provider deep-link flows, EAS linking, or store submission in the current
-slice.
-
-Web export is validation-only. Do not deploy the web target without a CSP and
-third-party-script review: browser session persistence uses localStorage. Keep
-untrusted binary assets out of CI while upstream Metro/image-size and Expo
-config-plugin/uuid build-chain advisories remain; do not force an Expo SDK downgrade.
+- Architecture reference: `CHOONZ/ARCHITECTURE.md`
+- Fleet standard: `GromCodebase/docs/fleet/per-repo-onboarding-envelope-standard-2026-08-17.md`
