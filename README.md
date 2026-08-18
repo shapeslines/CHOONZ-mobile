@@ -1,4 +1,4 @@
-﻿# CHOONZ-mobile
+# CHOONZ-mobile
 
 [![CI](https://github.com/shapeslines/CHOONZ-mobile/actions/workflows/ci.yml/badge.svg)](https://github.com/shapeslines/CHOONZ-mobile/actions/workflows/ci.yml)
 
@@ -7,7 +7,7 @@ Router slice includes service status, Supabase email/password sign-in, profile,
 the static roster catalog, and one constrained P1 practice-match loop. It
 consumes the **CHOONZ headless backend** over its bearer-token API.
 
-> **Status:** Expo SDK 56 review candidate. The Fight route supports the frozen
+> **Status:** Expo SDK 57 review candidate. The Fight route supports the frozen
 > P1 Toon/loadout and match lifecycle controls; P2 adds bounded profile and
 > connection management; and P3 adds only the gated developer mechanics lab.
 > OAuth/deep-link provider flows, EAS linking, store submission, bots, training,
@@ -18,7 +18,7 @@ consumes the **CHOONZ headless backend** over its bearer-token API.
 | Concern        | Choice                                              |
 | -------------- | --------------------------------------------------- |
 | Language       | TypeScript 6.x                                      |
-| Runtime        | Expo SDK 56 / React Native 0.85 / React 19          |
+| Runtime        | Expo SDK 57 / React Native 0.86 / React 19          |
 | Navigation     | Expo Router file routes in `src/app`                |
 | Auth           | Supabase Auth, SecureStore-backed PKCE sessions     |
 | Data           | CHOONZ bearer-token API + TanStack Query cache      |
@@ -138,7 +138,7 @@ Current npm audit findings are treated as a review-only build-chain risk. The
 time-bounded record covers the existing Metro/image-size and Expo
 config-plugin/uuid advisories plus the dev-test RNTL-to-React-Native aggregate.
 CI must not accept untrusted binary assets until compatible upstream fixes land.
-Keep the SDK 56 dependency set; do not force a downgrade merely to silence the
+Keep the SDK 57 dependency set; do not force a downgrade merely to silence the
 audit. The exact advisory paths, compensating controls, owner, and expiry are
 recorded in [`docs/security/npm-audit-exception.md`](docs/security/npm-audit-exception.md).
 

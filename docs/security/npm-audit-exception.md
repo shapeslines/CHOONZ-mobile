@@ -36,7 +36,7 @@ line that does not depend on the vulnerable parser.
 | Audit tool | Node.js `24.14.1`; npm `11.11.0`; `npm audit --json` |
 | Audit receipt | 2026-08-11T06:27:00.0576742Z–2026-08-11T06:27:02.3855169Z; JSON SHA-256 `f71317e57aa2f6ff0e92953debba6ea0d3d648e36782960e8baaa39156589d6f` |
 | Review by | 2026-09-10 or the next compatible Expo/RNTL fix, whichever is first |
-| Removal condition | Compatible upstream fixes are available and the Expo SDK 56 dependency set can be updated and re-audited. |
+| Removal condition | Compatible upstream fixes are available and the Expo SDK 57 dependency set can be updated and re-audited. |
 
 ## Final-candidate reapproval
 

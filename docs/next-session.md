@@ -1,10 +1,11 @@
-﻿# CHOONZ-mobile â€” next session
+# CHOONZ-mobile â€” next session
 
-## State @ draft-reconciliation candidate Â· 2026-08-13
+## State @ `eb34815` Â· 2026-08-18 Â· main
 
 P1, P2 profile/account polish, the developer-only P3 mechanics lab, and the
 catalog/fight accessibility announcement slices are on `main`. The 17 retained
-drafts #8â€“#25 have been reconciled in one preservation union: already-landed or
+drafts #8â€“#25 have been reconciled in one preservation union (merged as PR #29
+/ `1e54f26`, 2026-08-13): already-landed or
 superseded rolling changes are retained through ancestry; dated evidence remains
 available as historical records; and the four still-live source/test fixes from
 #22â€“#25 are applied to current main.
@@ -36,10 +37,11 @@ web export 8 routes). `image-size` highs remain: no patched release exists
 
 ## Next
 
-1. Obtain exact-head hosted CI for the reconciliation union and merge it without
-   squashing away the preserved draft ancestry.
-2. Confirm exact-main CI after landing; all 17 original drafts should then be
-   recognized as merged through ancestry.
+1. DONE 2026-08-13: reconciliation union merged as PR #29 (`1e54f26`) with
+   preserved draft ancestry (merge, not squash); exact-head hosted CI green.
+2. DONE: exact-main CI green on the landing (`1e54f26`); re-verified green on
+   tip `eb34815` (2026-08-18). All 17 original drafts are recognized as merged
+   through ancestry.
 3. Keep production build, provider, hosting, and store actions closed unless the
    owner opens a specific gate.
 
