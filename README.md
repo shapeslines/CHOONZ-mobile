@@ -1,3 +1,5 @@
+> **FLEET STATUS · ALIVE** (2026-08-17) — fighting-game mobile client (Expo) — PUBLIC. Authority: [FLEET-MAP](https://github.com/shapeslines/GromCodebase/blob/main/docs/fleet/FLEET-MAP.md) · decision: vault 2026-08-17 provenance ratification.
+
 # CHOONZ-mobile
 
 [![CI](https://github.com/shapeslines/CHOONZ-mobile/actions/workflows/ci.yml/badge.svg)](https://github.com/shapeslines/CHOONZ-mobile/actions/workflows/ci.yml)
