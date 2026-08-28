@@ -1,5 +1,16 @@
 # CHOONZ-mobile â€” next session
 
+## World-sync reconciliation · 2026-08-28
+
+Docs-only PR #41 is merged onto current main
+`cb2a8d3476c997b77ae1c86598d7348757c36af2` with exact source head
+`94a25ec6c010734c0eed402ac71251fce93301a8` retained as a merge parent. The
+cutline refreshes `docs/skins.md` to match the M-S1/M-S2 implementation already
+on main while preserving the queued M-S3, owner-gated M-S4, and Club Antics
+asset dependency for M-S5. It changes no code, package, provider, EAS, store,
+deployment, PM, or live-vault surface. Run the complete mobile validation
+matrix on the exact union head before landing.
+
 ## State @ `eb34815` Â· 2026-08-18 Â· main
 
 P1, P2 profile/account polish, the developer-only P3 mechanics lab, and the
