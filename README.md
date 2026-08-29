@@ -166,3 +166,5 @@ suite, and every command above on every push and PR.
 - Sibling patterns: `shapeslines/Clubheavy-Mobile`, `shapeslines/Shapeslines-Mobile`
 - Colony lane 02 source material: `C:\Users\Carson\Desktop\grokprod2\ingress\02-choonz-fighting-game\`
 - Architecture deep-dive: `../System-Architecture/projects/tinytoonz-headless.md` (legacy path; will retitle when CHOONZ rename propagates)
+
+Discovery map: [FLEET-INDEX.md](https://github.com/shapeslines/GromCodebase/blob/main/docs/fleet/FLEET-INDEX.md) (question → surface → one move). Do not fork GAP-REGISTER or FLEET-INDEX in this repo.
