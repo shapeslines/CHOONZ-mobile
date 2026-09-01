@@ -56,3 +56,10 @@ Backend companions: CHOONZ `docs/skins.md` + `docs/store-readiness.md` (PR #85) 
 
 1. Owner sign-off on decisions M1-M6 / D11-D18 before any implementation slice (identity config, provider enablement, IAP timing, privacy hosting).
 2. When gated: `app.json`/`eas.json` identity + icons (M1), Supabase Apple/Google enablement (M2/M3), account-deletion UI (C1), then M-S1 gel `ui_theme` skins.
+
+---
+## ⚑ Fleet audit flag — 2026-08-18 (tier-0 pass; uncommitted rider)
+Full report: `GITHUB-ROOT/_SCRATCH/fleet-audit-2026-08-18/REPORT.md`
+- PUBLIC repo: .gitignore covers .env/.env.local/.env.*.local but NOT plain .env.* (e.g. .env.production would be committable) — one-file fix. README status line lags (SDK 56 vs 57).
+- Behind 4 docs-only commits — pull.
+- Grades A/B/B/B/A/B → B+ · Triage: UNBLOCK-OWNER (M1–M6/D11–D18 sign-offs).
