@@ -13,7 +13,7 @@ Which file answers which question. Start at the top; stop when the question is a
 | Why was a decision made? | [decisions/](decisions/README.md) | ADRs are immutable; supersede, do not edit |
 | Skins on the client (tokens, picker, M-S1..M-S5)? | [skins.md](skins.md) | mirrors backend P-S1..P-S5 |
 | Store identity, providers, deletion UI, IAP, privacy (M1–M6)? | [store-readiness.md](store-readiness.md) | owner decisions M1–M6 |
-| Why is the npm audit exception in place and when is it reviewed? | [security/npm-audit-exception.md](security/npm-audit-exception.md) | review due 2026-09-10 |
+| Why is the npm audit exception in place and when is it reviewed? | [security/npm-audit-exception.md](security/npm-audit-exception.md) | reviewed 2026-09-03; re-scoped record unsigned, next review 2026-10-10 |
 | Web CSP posture before any web rollout? | [security/web-csp-prep-2026-08-12.md](security/web-csp-prep-2026-08-12.md) | validation-only |
 | What must propagate elsewhere after a landing? | [custodian-queue.md](custodian-queue.md) | markers for `/custodian` |
 | Where did the fat pins go? | [session-archive/](session-archive/) | extracted pins, dated |

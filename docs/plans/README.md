@@ -17,7 +17,7 @@ folder is where each of those becomes one **claimable, fenced plan**.
 | Backend P-S1 catalog → **M-S1** | (landed) | — | `src/lib/skins.ts`, decoders | — | ✅ #34 |
 | Backend P-S2 selection → **M-S2** | (landed) | — | `SkinProvider`, `src/app/skins.tsx` | — | ✅ #35 |
 | **Backend P-S3 unlock (CHOONZ #125) → M-S3 + object `detail`** | Now | [m-s3-earnable-ui.md](m-s3-earnable-ui.md) | `src/lib/{errors,api,decoder,types,fixtures,fixture-match-service}.ts`, `skin-provider.tsx`, `skins.tsx`, tests | none | **open — rank 1** |
-| `security/npm-audit-exception.md` review clause | Now | (ticket; no plan) | `package-lock.json` only with review | time (2026-09-10) | open — rank 2 |
+| `security/npm-audit-exception.md` review clause | Now | [npm-audit-review-2026-09.md](npm-audit-review-2026-09.md) | docs-only (no manifest change) | time (was 2026-09-10) | **done on lane — awaiting owner reapproval** |
 | Backend C1 `DELETE /me` → deletion UI status | Now | (verify; plan if missing) | `src/app/profile.tsx` | — | open — rank 3 |
 | Backend ARC686 P2 409 shape (D-P2-3) | Next | (after `G-P2-MUTATE`) | decoders, fight screens | backend gate | blocked |
 | Backend ADR-0003 engine revision 2 additive HUD fields | Next | (after CHOONZ M5) | decoders, fight HUD | backend gate | blocked |
