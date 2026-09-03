@@ -88,8 +88,11 @@ M-S2 selection surface. Scene and character rendering remain future seams.
   entries currently show `UNLOCK` or `STORE` copy only.
 - **Current selection** writes `PATCH /me/skins` and updates the cached
   loadout optimistically with rollback on error.
-- **M-S3 target:** earnable unlocks will surface their condition (for example,
-  "Win 3 series with REX") and trigger `POST /me/skins/{id}/unlock`; the
+- **M-S3 (shipped):** unowned earnable entries render an **UNLOCK** button that
+  calls `POST /me/skins/{id}/unlock`. A 200 re-fetches the loadout and the row becomes
+  selectable; a 403 `condition_not_met` shows the server's report as `observed/required`
+  (button reads **CHECK PROGRESS**); `revoked` shows REVOKED with no button. The catalog
+  carries no condition — the unlock response is the only source of progress, and the
   server remains the only verifier.
 - **M-S4 target:** IAP restore will ask RevenueCat for restored entitlements;
   grants remain backend-side (webhook recorded).
@@ -115,7 +118,7 @@ for M-S3–M-S5.
 
 1. **M-S1 — landed in PR #34:** registry helpers, decoder support, and gel skins as `ui_theme` (no new screens).
 2. **M-S2 — landed in PR #35:** loadout queries, themed shell/HUD, and Skins screen (selection only).
-3. **M-S3 — queued:** earnable unlock UI + conditions display.
+3. **M-S3 — landed 2026-09-03:** earnable unlock UI + progress display; generic object-valued error `detail` on `ChoonzClientError`; fixture unlock after 5 completed practice matches.
 4. **M-S4 — owner-gated:** RevenueCat integration + store CTA + restore.
 5. **M-S5 — dependency-gated:** character/scene skins once Club Antics assets exist.
 
