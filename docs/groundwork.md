@@ -11,7 +11,14 @@ Longer-lived build status. The resume pin is `docs/next-session.md`. Tickets liv
   catalog/fight accessibility, skins **M-S1** registry + gel `ui_theme` (#34) and **M-S2** loadout
   queries + themed shell + Skins screen (#35), SDK-57 patch-sync (#46). Fixtures mode serves the
   same decoded contract offline. Backend contracts consumed strictly through runtime decoders.
-- **Not yet:** C1 account-deletion UI status unverified against main; store identity M1 (`clubheavy.choonz`,
+- **C1 account deletion — shipped with gaps (2026-09-03):** the typed-confirm panel
+  (`DELETE MY ACCOUNT`) and `DELETE /me` `{confirm: true}` call were already on `main`; lane
+  `c1-deletion-ui-close` added the per-status contract (404 → already deleted, 422 →
+  `detail.message`, 403 → first-party denial, network/5xx → keep state + manual retry) and corrected
+  `docs/store-readiness.md` §3, which had the wrong body and confirm phrase. **Gaps:** the
+  pre-confirm explainer step and `src/app/privacy.tsx` stay unbuilt — both ride on the hosted
+  privacy URL, which is owner-gated M5.
+- **Not yet:** store identity M1 (`clubheavy.choonz`,
   backend D13), providers M2/M3, IAP M4, privacy URL M5 — all owner-gated; no EAS build, store
   submission, or production web rollout. npm-audit exception (`image-size` highs) review due
   **2026-09-10**.
@@ -22,8 +29,9 @@ Longer-lived build status. The resume pin is `docs/next-session.md`. Tickets liv
   open row. Plan record: [plans/m-s3-earnable-ui.md](plans/m-s3-earnable-ui.md).
 - **Rank 2** — npm-audit exception review (due 2026-09-10): re-run `npm audit`, confirm
   `image-size` status, renew or retire the exception; any lockfile change needs the review first.
-- **Rank 3** — verify the C1 deletion UI state on main and record it (archive item says
-  "then account-deletion UI (C1)"; backend `DELETE /me` shipped 2026-08-16).
+- **Rank 3 — closed** by [plans/c1-deletion-ui-close.md](plans/c1-deletion-ui-close.md) (lane
+  `lane/choonzm-c1-deletion-close/20260903`, PR pending). What remains of C1 is owner-gated: the
+  explainer step and `src/app/privacy.tsx` wait on the M5 hosted privacy URL.
 
 ## Conventions settled 2026-09-03
 

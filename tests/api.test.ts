@@ -512,6 +512,27 @@ describe('CHOONZ mechanics lab client', () => {
     expect(receivedInput).toBe(JSON.stringify({ confirm: true }));
   });
 
+  it('rejects account deletion with the decoded 422 detail', async () => {
+    const client = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'access-token',
+      fetcher: async () =>
+        new Response(
+          JSON.stringify({
+            detail: { code: 'confirm_required', message: 'Deletion requires confirm=true.' },
+            error_id: 'err-1',
+          }),
+          { status: 422, headers: { 'Content-Type': 'application/json' } },
+        ),
+    });
+
+    await expect(client.deleteAccount()).rejects.toMatchObject({
+      kind: 'response',
+      status: 422,
+      detail: { code: 'confirm_required', message: 'Deletion requires confirm=true.' },
+    });
+  });
+
   it('fails closed for account deletion in fixture mode', async () => {
     const fixtureConfig = resolveAppConfig({ EXPO_PUBLIC_CHOONZ_MODE: 'fixtures' }, true);
     const client = new ChoonzApiClient({

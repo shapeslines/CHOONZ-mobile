@@ -62,15 +62,25 @@ Current: Supabase **email+password only** (`signInWithPassword`).
 
 ## 3. Account deletion flow (C1)
 
-- **Profile screen** gains an "Delete account" entry (red, destructive,
-  first-party only).
-- **Flow:** explainer screen → typed confirmation (`DELETE YOUR ACCOUNT`) →
-  `DELETE /me` with `{confirm: true, subject}` → 204 → clear SecureStore
-  session + protected caches → navigate to signed-out state.
-- **Error handling:** 401 → session finalize; 403 → scope denial message;
-  404 → treat as already deleted → clear local state; 422 → show the missing
-  confirm reason; 5xx → preserve state, offer retry (the established
-  per-status contract in `mobile-integration.md`).
+- **Profile screen** has a "DELETE ACCOUNT" entry (red, destructive,
+  first-party only) — **shipped**, `src/app/profile.tsx`.
+- **Flow (shipped):** typed confirmation (**`DELETE MY ACCOUNT`** — the exact
+  phrase in code, exported as `DELETE_CONFIRM_PHRASE`) → `DELETE /me` with a
+  body of **exactly `{confirm: true}`** (the backend's `AccountDeleteRequest`
+  takes no subject; the bearer token is the subject) → 204 → sign out (clears
+  the SecureStore session) + `queryClient.clear()` → signed-out state.
+  The pre-confirm **explainer step** is still unbuilt: it belongs with the
+  in-app privacy copy (`src/app/privacy.tsx`, §5), which is **owner-gated on
+  M5** (hosted privacy URL).
+- **Error handling — shipped** (`classifyDeleteFailure` / `useAccountDeletion`
+  in `src/app/profile.tsx`, covered by `tests/profile-screen.test.tsx`):
+  401 → session finalize (handled upstream by the API client's
+  `onUnauthorized`, never reaches the screen); 403 → first-party/scope denial
+  copy; 404 → treat as already deleted → sign out + clear caches exactly like
+  success; 422 → show `detail.message` from the server (generic fallback when
+  the body carries no detail); network / 5xx → keep the confirm state and show
+  a `retry-delete-account` affordance that re-invokes the delete. Deletion is
+  never retried automatically.
 - **Reviewer discoverability:** the flow must be reachable without a
   purchase and without special steps (both stores check this).
 - **Provider side:** backend triggers Supabase user deletion (owner rail
