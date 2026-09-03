@@ -4,8 +4,9 @@ Longer-lived build status. The resume pin is `docs/next-session.md`. Tickets liv
 
 ## Build status
 
-- **Now:** `main` is at `da8d690` — the PM baseline (#48) and **M-S3** earnable unlock UI +
-  object-valued error `detail` (#50) both merged 2026-09-03 on top of the Expo SDK 57 / RN 0.86 /
+- **Now:** `main` is at `1ca99d2` — the PM baseline (#48), **M-S3** earnable unlock UI +
+  object-valued error `detail` (#50), and the npm-audit review record (#52) all merged 2026-09-03,
+  with the C1 deletion-close lane (#51) merging on top, on the Expo SDK 57 / RN 0.86 /
   React 19 review candidate (#46: Vitest 59, rendered Jest 33, lint, typecheck, Expo
   check/doctor, static web export, 8 routes). Local gates stay green against the installed tree,
   but **hosted CI is red on `main`** because its first step is `npm ci` and the committed lockfile
@@ -14,7 +15,14 @@ Longer-lived build status. The resume pin is `docs/next-session.md`. Tickets liv
   catalog/fight accessibility, skins **M-S1** registry + gel `ui_theme` (#34) and **M-S2** loadout
   queries + themed shell + Skins screen (#35), SDK-57 patch-sync (#46). Fixtures mode serves the
   same decoded contract offline. Backend contracts consumed strictly through runtime decoders.
-- **Not yet:** C1 account-deletion UI status unverified against main; store identity M1 (`clubheavy.choonz`,
+- **C1 account deletion — shipped with gaps (2026-09-03):** the typed-confirm panel
+  (`DELETE MY ACCOUNT`) and `DELETE /me` `{confirm: true}` call were already on `main`; lane
+  `c1-deletion-ui-close` added the per-status contract (404 → already deleted, 422 →
+  `detail.message`, 403 → first-party denial, network/5xx → keep state + manual retry) and corrected
+  `docs/store-readiness.md` §3, which had the wrong body and confirm phrase. **Gaps:** the
+  pre-confirm explainer step and `src/app/privacy.tsx` stay unbuilt — both ride on the hosted
+  privacy URL, which is owner-gated M5.
+- **Not yet:** store identity M1 (`clubheavy.choonz`,
   backend D13), providers M2/M3, IAP M4, privacy URL M5 — all owner-gated; no EAS build, store
   submission, or production web rollout. The npm-audit exception review was **discharged
   2026-09-03**, ahead of its 2026-09-10 date: the audit is now **13 moderate / 0 high / 0
@@ -33,13 +41,19 @@ Longer-lived build status. The resume pin is `docs/next-session.md`. Tickets liv
 
 ## Up next
 
-- **Rank 3** — verify the C1 deletion UI state on main and record it (archive item says
-  "then account-deletion UI (C1)"; backend `DELETE /me` shipped 2026-08-16). This is the top open
-  build row now that M-S3 (#50) and the PM baseline (#48) are merged.
-- **Owner** — sign or reject the re-scoped npm-audit exception (rank 2, unsigned decision row), and
-  rule on the lockfile-reify repair lane that CI redness depends on.
-- **Rank 2 follow-on** — once signed, the next review is 2026-10-10 or the next Expo SDK line;
-  any lockfile change still needs the review first.
+- **Rank 1 — owner** — repair the mobile lockfile drift: the committed lock pins `@react-native/*`
+  at 0.86.2 against the `react-native@0.86.3` the manifest requires, so `npm ci` fails, hosted CI on
+  `main` is red, and the exception's clean-`npm ci` deployment precondition is unprovable. A fresh
+  resolution re-introduces `image-size`, so the re-lock must happen under a fresh dependency review,
+  not as an incidental fix.
+- **Rank 2 — owner** — sign or reject the re-scoped npm-audit exception (unsigned decision row,
+  merged as #52). Once signed, the next review is 2026-10-10 or the next Expo SDK line; any lockfile
+  change still needs the review first.
+- **Rank 3 — closed** by [plans/c1-deletion-ui-close.md](plans/c1-deletion-ui-close.md) (lane
+  `lane/choonzm-c1-deletion-close/20260903`, PR #51). What remains of C1 is owner-gated: the
+  explainer step and `src/app/privacy.tsx` wait on the M5 hosted privacy URL.
+- **Agent pickup, after the owner rows clear** — the rev-2 mechanics-lab decoder bump when CHOONZ
+  engine M4 lands, or M1 identity once the owner decides.
 
 ## Conventions settled 2026-09-03
 
