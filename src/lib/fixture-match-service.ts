@@ -77,6 +77,17 @@ export class FixtureMatchService {
     return clone(this.toons);
   }
 
+  /** P-S3: completed practice matches gate the fixture earnable unlock. */
+  completedMatchCount(): number {
+    let count = 0;
+    for (const record of this.matches.values()) {
+      if (record.match.status === 'completed') {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
   async createToon(input: ToonCreateInput): Promise<Toon> {
     const name = input.name.trim();
     if (!name) {

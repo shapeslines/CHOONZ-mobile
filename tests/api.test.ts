@@ -529,7 +529,124 @@ describe('CHOONZ mechanics lab client', () => {
     });
     const catalog = await client.getSkins();
     expect(catalog.schema_version).toBe('1.0');
-    expect(catalog.skins).toHaveLength(12);
+    expect(catalog.skins).toHaveLength(13);
     expect(catalog.skins.find((skin) => skin.id === 'gel:sodium')?.default).toBe(true);
+  });
+
+  it('attaches object-valued detail to 4xx errors and keeps string / empty detail behaviour', async () => {
+    const make = (body: BodyInit | null, status: number) =>
+      new ChoonzApiClient({
+        config: apiConfig,
+        getAccessToken: async () => 'access-token',
+        fetcher: async () => new Response(body, { status, headers: { 'Content-Type': 'application/json' } }),
+      });
+    await expect(
+      make(JSON.stringify({ detail: { code: 'x', message: 'm', receipt: { r: 1 } }, error_id: 'e' }), 409).getMe(),
+    ).rejects.toMatchObject({
+      kind: 'response',
+      status: 409,
+      detail: { code: 'x', message: 'm', extra: { receipt: { r: 1 } } },
+    });
+    await expect(make(JSON.stringify({ detail: 'nope' }), 403).getMe()).rejects.toMatchObject({
+      status: 403,
+      detail: { code: 'unknown', message: 'nope' },
+    });
+    const empty = await make(null, 403).getMe().catch((error: unknown) => error);
+    expect(empty).toBeInstanceOf(ChoonzClientError);
+    expect((empty as ChoonzClientError).detail).toBeUndefined();
+  });
+
+  it('unlockSkin returns a granted receipt from a 200', async () => {
+    let requested = '';
+    let method = '';
+    const client = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'access-token',
+      fetcher: async (input, init) => {
+        requested = input;
+        method = init?.method ?? '';
+        return Response.json({
+          skin_id: 'gel:sodium-ember',
+          source: 'earnable',
+          granted_at: '2026-09-03T00:00:00Z',
+          condition: { id: 'complete_n_matches', required: 5, observed: 5 },
+        });
+      },
+    });
+    const outcome = await client.unlockSkin('gel:sodium-ember');
+    expect(requested).toBe('https://api.choonz.example/me/skins/gel%3Asodium-ember/unlock');
+    expect(method).toBe('POST');
+    expect(outcome).toMatchObject({ status: 'granted', receipt: { condition: { observed: 5 } } });
+  });
+
+  it('unlockSkin surfaces a 403 condition report without throwing', async () => {
+    const client = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'access-token',
+      fetcher: async () =>
+        new Response(
+          JSON.stringify({
+            detail: {
+              code: 'condition_not_met',
+              message: 'not yet',
+              condition: { id: 'complete_n_matches', required: 5, observed: 2 },
+            },
+          }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } },
+        ),
+    });
+    await expect(client.unlockSkin('gel:sodium-ember')).resolves.toEqual({
+      status: 'condition_not_met',
+      condition: { id: 'complete_n_matches', required: 5, observed: 2 },
+    });
+  });
+
+  it.each([404, 422])('unlockSkin rethrows %i', async (status) => {
+    const client = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'access-token',
+      fetcher: async () => new Response(null, { status }),
+    });
+    await expect(client.unlockSkin('gel:nope')).rejects.toMatchObject({ kind: 'response', status });
+  });
+
+  it('unlockSkin rethrows a 403 with an unknown code', async () => {
+    const client = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'access-token',
+      fetcher: async () =>
+        new Response(JSON.stringify({ detail: { code: 'weird' } }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    });
+    await expect(client.unlockSkin('gel:sodium-ember')).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('fixture unlock fails closed until five matches complete, then persists the grant', async () => {
+    const fixtureConfig = resolveAppConfig({ EXPO_PUBLIC_CHOONZ_MODE: 'fixtures' }, true);
+    const client = new ChoonzApiClient({ config: fixtureConfig, getAccessToken: async () => null });
+    await expect(client.unlockSkin('gel:sodium-ember')).resolves.toMatchObject({
+      status: 'condition_not_met',
+      condition: { required: 5, observed: 0 },
+    });
+    await expect(client.unlockSkin('gel:nope')).rejects.toMatchObject({ status: 404 });
+    await expect(client.unlockSkin('gel:red')).rejects.toMatchObject({ status: 422 });
+
+    const toon = (await client.getToons())[0];
+    if (!toon) {
+      throw new Error('fixture toons must not be empty');
+    }
+    for (let i = 0; i < 5; i += 1) {
+      const match = await client.createMatch({ p1_toon_id: toon.id });
+      await client.startMatch(match.id);
+      await client.completeMatch(match.id);
+    }
+    await expect(client.unlockSkin('gel:sodium-ember')).resolves.toMatchObject({ status: 'granted' });
+    const loadout = await client.getMySkins();
+    expect(loadout.owned.map((grant) => grant.skin_id)).toEqual(['gel:sodium-ember']);
+    const again = await client.updateMySkins({ kind: 'ui_theme', skin_id: 'gel:sodium-ember' });
+    expect(again.owned).toHaveLength(1);
+    expect(again.selection.ui_theme).toBe('gel:sodium-ember');
   });
 });
