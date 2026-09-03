@@ -15,6 +15,8 @@ consumes the **CHOONZ headless backend** over its bearer-token API.
 > OAuth/deep-link provider flows, EAS linking, store submission, bots, training,
 > tutorials, and production web deployment remain excluded.
 
+> **Start here (agents):** [`AGENTS.md`](AGENTS.md) (boundaries, objects map, session protocol) → [`docs/README.md`](docs/README.md) (which file answers which question) → [`docs/next-session.md`](docs/next-session.md) (FIRST action) → [`docs/groundwork.md`](docs/groundwork.md) → claim a row of [`docs/WORK-FRONTLOG.md`](docs/WORK-FRONTLOG.md) and its plan in [`docs/plans/`](docs/plans/README.md). Backend contract: CHOONZ `docs/mobile-integration.md`.
+
 ## Stack
 
 | Concern        | Choice                                              |
