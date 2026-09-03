@@ -1,18 +1,19 @@
 # CHOONZ-mobile — next session
 
-## State @ 2026-09-03 · lane choonzm-pm-baseline (branch dated 2026-09-03)
-Base = main after PR #46. PM baseline landed on the lane: `CLAUDE.md` shim, `AGENTS.md` objects
-map + session protocol, `docs/README.md` map, ADR-0025 surfaces filled, ADR-0001, `docs/plans/`
-bridge + the M-S3 plan, custodian queue. Depth: standard.
+## State @ 2026-09-03 · lane choonzm-m-s3 (stacked on the PM-baseline lane, PR #48)
+Base = main after PR #46. Two lanes open: PM baseline (PR #48, docs-only) and this M-S3 lane:
+object-valued error `detail` on `ChoonzClientError`, unlock decoders, `unlockSkin`, `SkinRow`
+unlock/progress UI, stateful fixture ownership. Depth: standard.
 
 ## Shipped
 - Expo SDK 57 patch-version sync [#46, merged]
-- lane choonzm-pm-baseline — docs-only [PR pending, owner merge]
+- lane choonzm-pm-baseline — docs-only [#48, owner merge]
+- lane choonzm-m-s3 — M-S3 earnable unlock UI + detail decoder [PR pending, merge after #48]
 
 ## Companion packet
 - changelog: [WORK-FRONTLOG.md](WORK-FRONTLOG.md) "Done (recent)"
 - summary: [groundwork.md](groundwork.md)
-- nuances: backend now returns object-valued `detail` on P-S3 403 — the client discards non-2xx bodies today (plan S1 fixes this generically)
+- nuances: `request()` now decodes non-2xx bodies into `ChoonzClientError.detail` (`{code, message, extra}`); feature decoders read `extra` (unlock → `condition`; bot 409 → `receipt` later)
 - logging: inline/none
 - suggestions / pickup: [plans/README.md](plans/README.md)
 
@@ -21,12 +22,11 @@ bridge + the M-S3 plan, custodian queue. Depth: standard.
 - **communicated:** mailbox posture/start/wrap on `choonz-mobile`.
 - **raised for /custodian:** 3 markers → [custodian-queue.md](custodian-queue.md)
 - **FOR /brain:** CHOONZ-mobile shares the backend's vault note; branch prefix is now `lane/choonzm-…`.
-- **DEFERRED / unresolved:** owner merge of this lane; M1–M6 owner decisions; C1 deletion UI status.
+- **DEFERRED / unresolved:** owner merge of #48 then the M-S3 PR; M1–M6 owner decisions; C1 deletion UI status.
 
 ## Next — FIRST action
-1. Claim rank 1 [plans/m-s3-earnable-ui.md](plans/m-s3-earnable-ui.md) on `lane/choonzm-m-s3/<date>`: record the S0 baseline (`npm test`, `npm run test:screen`, typecheck, lint), then S1 `ApiErrorDetail` + `request()` body decode.
+1. Rank 2: npm-audit exception review before 2026-09-10 — run `npm audit`, confirm `image-size` status, renew or retire [security/npm-audit-exception.md](security/npm-audit-exception.md). Then rank 3: verify the C1 deletion UI on main.
 
 ## Queue
-- Rank 2 npm-audit exception review before 2026-09-10 (any lockfile change needs it first).
-- Rank 3 verify C1 deletion UI status on main; record in groundwork.
+- Rank 4/5 (blocked): bot 409 decoding after `G-P2-MUTATE`; fight-v2 additive HUD fields after CHOONZ engine M5.
 - Keep `docs-surface-lint.py --repo .` green on wrap; patch the shared vault note's projection fields.

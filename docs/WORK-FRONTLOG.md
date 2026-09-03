@@ -9,7 +9,7 @@ are serial. Owner-blocked rows are never claimed by an agent.
 
 | Rank | Work | Evidence / fence | State |
 |---:|---|---|---|
-| 1 | **`m-s3-earnable-ui`** — `ApiErrorDetail` on `ChoonzClientError`, unlock decoders, `unlockSkin` mutation, `SkinRow` unlock/progress UI, stateful fixture ownership | [plans/m-s3-earnable-ui.md](plans/m-s3-earnable-ui.md); fence `src/lib/{errors,api,decoder,types,fixtures,fixture-match-service}.ts`, `src/providers/skin-provider.tsx`, `src/app/skins.tsx`, `tests/{api,skins}.test.ts`, `tests/skins-screen.test.tsx`, `docs/skins.md` | open — gate met (CHOONZ #125 merged) |
+| 1 | **`m-s3-earnable-ui`** — `ApiErrorDetail` on `ChoonzClientError`, unlock decoders, `unlockSkin` mutation, `SkinRow` unlock/progress UI, stateful fixture ownership | [plans/m-s3-earnable-ui.md](plans/m-s3-earnable-ui.md); fence `src/lib/{errors,api,decoder,types,fixtures,fixture-match-service}.ts`, `src/providers/skin-provider.tsx`, `src/app/skins.tsx`, `tests/{api,skins}.test.ts`, `tests/skins-screen.test.tsx`, `docs/skins.md` | **done on lane** `lane/choonzm-m-s3/20260903` (PR pending) |
 | 2 | npm-audit exception review (due 2026-09-10) | [security/npm-audit-exception.md](security/npm-audit-exception.md); `package-lock.json` only with review | open — time-gated |
 | 3 | C1 deletion UI status check against main; record in groundwork | `src/app/profile.tsx`, `docs/store-readiness.md` §3 | open — verify first |
 | 4 | Decode bot-orchestration 409 `{detail:{code, message, receipt?}}` | `src/lib/decoder.ts`, fight screens | blocked — CHOONZ `G-P2-MUTATE` |
@@ -22,6 +22,7 @@ are serial. Owner-blocked rows are never claimed by an agent.
 
 | Work | Evidence |
 |---|---|
+| M-S3 earnable unlock UI + object-valued error `detail` | lane `lane/choonzm-m-s3/20260903` |
 | PM baseline: `CLAUDE.md` shim, `AGENTS.md` objects map + protocol, docs map, ADR-0001, plans bridge, M-S3 plan | lane `lane/choonzm-pm-baseline/20260903` |
 | Expo SDK 57 patch-version sync | PR #46 (2026-08-29) |
 | Docs-surface scaffold + session-archive extraction | PRs #44/#45 (2026-08-29) |

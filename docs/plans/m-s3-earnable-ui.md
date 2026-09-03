@@ -1,6 +1,6 @@
 # Plan — `m-s3-earnable-ui` (earnable unlock UI + object-valued error `detail`)
 
-**Status:** open, gate met (CHOONZ #125 shipped `POST /me/skins/{id}/unlock`, 2026-09-02).
+**Status:** done on lane `lane/choonzm-m-s3/20260903` (2026-09-03); gate met (CHOONZ #125 shipped `POST /me/skins/{id}/unlock`, 2026-09-02).
 **Rank:** 1. **Size:** M. **Branch:** `lane/choonzm-m-s3/<yyyymmdd>`.
 
 ## Goal
@@ -71,15 +71,15 @@ condition fields (backend hash contract); auto-select after unlock; fight screen
 
 ## Slice ledger
 
-- [ ] S0 Baseline: `npm test`, `npm run test:screen`, `npm run typecheck`, `npm run lint` green on main.
-- [ ] S1 `ApiErrorDetail` + `request()` body decode + `decodeApiErrorDetail`; api tests (object /
+- [x] S0 Baseline: Vitest 78, Jest 41, typecheck, lint green on main. Result: Vitest 89, Jest 45, typecheck, lint, expo:check, web export green; lockfile untouched.
+- [x] S1 `ApiErrorDetail` + `request()` body decode + `decodeApiErrorDetail`; api tests (object /
       string / empty detail).
-- [ ] S2 Unlock types + decoders (`decodeSkinGrant` hoisted); decoder tests.
-- [ ] S3 `unlockSkin` client method (API + fixture); `completedMatchCount`; fixture catalog entry;
+- [x] S2 Unlock types + decoders (`decodeSkinGrant` hoisted); decoder tests.
+- [x] S3 `unlockSkin` client method (API + fixture); `completedMatchCount`; fixture catalog entry;
       api tests (200, 403 report, 404/422 rethrow, fixture gating + persistence); count 12 → 13.
-- [ ] S4 Provider mutation + report state.
-- [ ] S5 `SkinRow` UI; screen tests (unlock callback, progress copy, revoked, iap inert).
-- [ ] S6 `docs/skins.md` M-S3 shipped; frontlog; pin.
+- [x] S4 Provider mutation + report state.
+- [x] S5 `SkinRow` UI; screen tests (unlock callback, progress copy, revoked, iap inert).
+- [x] S6 `docs/skins.md` M-S3 shipped; frontlog; pin.
 
 ## Acceptance
 

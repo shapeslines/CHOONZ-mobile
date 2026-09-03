@@ -1,4 +1,4 @@
-import { ResponseDecodeError } from '@/lib/errors';
+import { ResponseDecodeError, type ApiErrorDetail } from '@/lib/errors';
 import type {
   CatalogMeta,
   ChoonzConnection,
@@ -31,7 +31,10 @@ import type {
   MySkins,
   Skin,
   SkinCatalog,
+  SkinGrant,
   SkinSummary,
+  SkinUnlockCondition,
+  SkinUnlockReceipt,
   SoundEvent,
   Stage,
   Toon,
@@ -674,14 +677,9 @@ export function decodeSkin(value: unknown): Skin {
 
 export function decodeMySkins(value: unknown): MySkins {
   const input = record(value, 'my skins');
-  const owned = array(input.owned, 'my skins.owned').map((item, index) => {
-    const grant = record(item, `my skins.owned[${index}]`);
-    return {
-      skin_id: string(grant.skin_id, `my skins.owned[${index}].skin_id`),
-      source: literal(grant.source, skinEntitlements, `my skins.owned[${index}].source`),
-      granted_at: string(grant.granted_at, `my skins.owned[${index}].granted_at`),
-    };
-  });
+  const owned = array(input.owned, 'my skins.owned').map((item, index) =>
+    decodeSkinGrant(item, `my skins.owned[${index}]`),
+  );
   const selectionInput = record(input.selection, 'my skins.selection');
   return {
     owned,
@@ -690,5 +688,64 @@ export function decodeMySkins(value: unknown): MySkins {
       scene_vibe: string(selectionInput.scene_vibe, 'my skins.selection.scene_vibe'),
       character: string(selectionInput.character, 'my skins.selection.character'),
     },
+  };
+}
+
+export function decodeSkinGrant(value: unknown, label = 'skin grant'): SkinGrant {
+  const grant = record(value, label);
+  return {
+    skin_id: string(grant.skin_id, `${label}.skin_id`),
+    source: literal(grant.source, skinEntitlements, `${label}.source`),
+    granted_at: string(grant.granted_at, `${label}.granted_at`),
+  };
+}
+
+export function decodeSkinUnlockCondition(
+  value: unknown,
+  label = 'unlock condition',
+): SkinUnlockCondition {
+  const input = record(value, label);
+  const required = integer(input.required, `${label}.required`);
+  const observed = integer(input.observed, `${label}.observed`);
+  if (required < 0 || observed < 0) {
+    throw new ResponseDecodeError(`${label} counts must be non-negative.`);
+  }
+  return { id: string(input.id, `${label}.id`), required, observed };
+}
+
+export function decodeSkinUnlockReceipt(value: unknown): SkinUnlockReceipt {
+  const input = record(value, 'skin unlock');
+  const grant = decodeSkinGrant(input, 'skin unlock');
+  return {
+    ...grant,
+    source: literal(input.source, ['earnable'] as const, 'skin unlock.source'),
+    condition: decodeSkinUnlockCondition(input.condition, 'skin unlock.condition'),
+  };
+}
+
+/**
+ * Lenient by design: error bodies are advisory. Anything that is not a string
+ * or an object with a string `code` yields `undefined` so the caller keeps the
+ * generic status-based failure.
+ */
+export function decodeApiErrorDetail(value: unknown): ApiErrorDetail | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+  const detail = (value as Record<string, unknown>).detail;
+  if (typeof detail === 'string') {
+    return { code: 'unknown', message: detail, extra: {} };
+  }
+  if (!detail || typeof detail !== 'object' || Array.isArray(detail)) {
+    return undefined;
+  }
+  const { code, message, ...extra } = detail as Record<string, unknown>;
+  if (typeof code !== 'string') {
+    return undefined;
+  }
+  return {
+    code,
+    message: typeof message === 'string' ? message : '',
+    extra,
   };
 }

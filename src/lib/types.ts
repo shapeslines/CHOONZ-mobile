@@ -386,3 +386,19 @@ export interface SkinSelectionUpdateInput {
   kind: SkinKind;
   skin_id: string;
 }
+
+export interface SkinUnlockCondition {
+  id: string;
+  required: number;
+  observed: number;
+}
+
+export interface SkinUnlockReceipt extends SkinGrant {
+  source: 'earnable';
+  condition: SkinUnlockCondition;
+}
+
+export type SkinUnlockOutcome =
+  | { status: 'granted'; receipt: SkinUnlockReceipt }
+  | { status: 'condition_not_met'; condition: SkinUnlockCondition }
+  | { status: 'revoked'; message: string };
