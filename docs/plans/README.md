@@ -16,9 +16,10 @@ folder is where each of those becomes one **claimable, fenced plan**.
 | ARC 677 P3 mechanics lab preview | (landed) | — | `src/app/lab.tsx` | flag-gated | ✅ |
 | Backend P-S1 catalog → **M-S1** | (landed) | — | `src/lib/skins.ts`, decoders | — | ✅ #34 |
 | Backend P-S2 selection → **M-S2** | (landed) | — | `SkinProvider`, `src/app/skins.tsx` | — | ✅ #35 |
-| **Backend P-S3 unlock (CHOONZ #125) → M-S3 + object `detail`** | Now | [m-s3-earnable-ui.md](m-s3-earnable-ui.md) | `src/lib/{errors,api,decoder,types,fixtures,fixture-match-service}.ts`, `skin-provider.tsx`, `skins.tsx`, tests | none | **open — rank 1** |
-| `security/npm-audit-exception.md` review clause | Now | (ticket; no plan) | `package-lock.json` only with review | time (2026-09-10) | open — rank 2 |
-| Backend C1 `DELETE /me` → per-status deletion UI | Now | [c1-deletion-ui-close.md](c1-deletion-ui-close.md) | `src/app/profile.tsx`, `tests/{profile-screen.test.tsx,api.test.ts}`, `docs/store-readiness.md` | none | **done on lane** — rank 3 (explainer + `privacy.tsx` owner-gated M5) |
+| **Backend P-S3 unlock (CHOONZ #125) → M-S3 + object `detail`** | Now | [m-s3-earnable-ui.md](m-s3-earnable-ui.md) | `src/lib/{errors,api,decoder,types,fixtures,fixture-match-service}.ts`, `skin-provider.tsx`, `skins.tsx`, tests | none | ✅ #50 |
+| Lockfile reify failure found by the 2026-09 audit review | Now | (owner; fresh dependency review) | `package.json`, `package-lock.json` | owner | **blocked — rank 1** |
+| `security/npm-audit-exception.md` review clause | Now | [npm-audit-review-2026-09.md](npm-audit-review-2026-09.md) | docs-only (no manifest change) | time (was 2026-09-10) | **done (#52) — awaiting owner reapproval**, rank 2 |
+| Backend C1 `DELETE /me` → per-status deletion UI | Now | [c1-deletion-ui-close.md](c1-deletion-ui-close.md) | `src/app/profile.tsx`, `tests/{profile-screen.test.tsx,api.test.ts}`, `docs/store-readiness.md` | none | **done (#51)** — rank 3 (explainer + `privacy.tsx` owner-gated M5) |
 | Backend ARC686 P2 409 shape (D-P2-3) | Next | (after `G-P2-MUTATE`) | decoders, fight screens | backend gate | blocked |
 | Backend ADR-0003 engine revision 2 additive HUD fields | Next | (after CHOONZ M5) | decoders, fight HUD | backend gate | blocked |
 | D13 / M1 store identity `clubheavy.choonz`, EAS profiles | Next | (owner) | `app.json`, `eas.json` | owner M1 | blocked |
