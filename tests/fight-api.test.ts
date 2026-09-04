@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { ChoonzApiClient, type FetchLike } from '../src/lib/api';
 import { resolveAppConfig } from '../src/lib/config';
+import { decodeMatch, decodeMatchState } from '../src/lib/decoder';
+import { ResponseDecodeError } from '../src/lib/errors';
 
 const apiConfig = resolveAppConfig(
   {
@@ -202,5 +204,99 @@ describe('fight API boundary', () => {
     expect(await client.getMatchState(match.id)).toMatchObject({ combo: 1 });
     expect(tokenReads).toBe(0);
     expect(fetches).toBe(0);
+  });
+});
+
+// --------------------------------------------------------------------------- //
+// Engine revision 2 (CHOONZ #135 M4/M5) — additive, never inferred.
+// --------------------------------------------------------------------------- //
+
+describe('fight-v2 additive shapes', () => {
+  it('defaults Match.engine to ah-scripted when an older server omits the key', () => {
+    const older = matchPayload();
+    expect('engine' in older).toBe(false);
+    expect(decodeMatch(older).engine).toBe('ah-scripted');
+  });
+
+  it('decodes a declared Match.engine and rejects an unknown one', () => {
+    expect(decodeMatch({ ...matchPayload(), engine: 'fight-v2' }).engine).toBe('fight-v2');
+    expect(decodeMatch({ ...matchPayload(), engine: 'ah-scripted' }).engine).toBe('ah-scripted');
+    expect(() => decodeMatch({ ...matchPayload(), engine: 'fight-v3' })).toThrow(
+      ResponseDecodeError,
+    );
+    expect(() => decodeMatch({ ...matchPayload(), engine: null })).toThrow(ResponseDecodeError);
+  });
+
+  it('still decodes a full read that carries none of the fight-v2 keys', () => {
+    const state = decodeMatchState(statePayload());
+    expect(state.engine).toBeUndefined();
+    expect(state.over).toBeUndefined();
+    expect(state.winner).toBeUndefined();
+    expect(state.p1.state).toBeUndefined();
+    expect(state.p1.legal_actions).toBeUndefined();
+    expect(state.p1.move_costs).toBeUndefined();
+    expect(state.ann).toBe('ROUND CALL');
+  });
+
+  it('decodes the fight-v2 additive keys and ignores boxes like any unknown key', () => {
+    const base = statePayload();
+    const state = decodeMatchState({
+      ...base,
+      engine: 'fight-v2',
+      over: true,
+      winner: 'p2',
+      p1: {
+        ...base.p1,
+        state: 'recovery',
+        legal_actions: ['light', 'block'],
+        move_costs: { special: 0.25, heavy: 0 },
+        boxes: [{ kind: 'hurt', x: 1, y: 2, w: 3, h: 4 }],
+      },
+    });
+
+    expect(state.engine).toBe('fight-v2');
+    expect(state.over).toBe(true);
+    expect(state.winner).toBe('p2');
+    expect(state.p1.state).toBe('recovery');
+    expect(state.p1.legal_actions).toEqual(['light', 'block']);
+    expect(state.p1.move_costs).toEqual({ special: 0.25, heavy: 0 });
+    expect(state.p1).not.toHaveProperty('boxes');
+    expect(state.p2.state).toBeUndefined();
+  });
+
+  it('fails closed when a present fight-v2 key has the wrong type', () => {
+    const base = statePayload();
+    expect(() => decodeMatchState({ ...base, over: 'yes' })).toThrow(ResponseDecodeError);
+    expect(() => decodeMatchState({ ...base, winner: 'p3' })).toThrow(ResponseDecodeError);
+    expect(() => decodeMatchState({ ...base, engine: 'fight-v3' })).toThrow(ResponseDecodeError);
+    expect(() => decodeMatchState({ ...base, p1: { ...base.p1, state: 7 } })).toThrow(
+      ResponseDecodeError,
+    );
+    expect(() =>
+      decodeMatchState({ ...base, p1: { ...base.p1, legal_actions: 'light' } }),
+    ).toThrow(ResponseDecodeError);
+    expect(() =>
+      decodeMatchState({ ...base, p1: { ...base.p1, move_costs: { special: 'free' } } }),
+    ).toThrow(ResponseDecodeError);
+  });
+
+  it('passes an engine request through the create body without inventing one', async () => {
+    const bodies: (string | undefined)[] = [];
+    const client = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'token-19',
+      fetcher: async (_input, init) => {
+        bodies.push(typeof init?.body === 'string' ? init.body : undefined);
+        return Response.json({ ...matchPayload(), engine: 'fight-v2' });
+      },
+    });
+
+    await expect(client.createMatch({ p1_toon_id: 4, engine: 'fight-v2' })).resolves.toMatchObject({
+      engine: 'fight-v2',
+    });
+    await client.createMatch({ p1_toon_id: 4 });
+
+    expect(bodies[0]).toBe(JSON.stringify({ p1_toon_id: 4, engine: 'fight-v2' }));
+    expect(bodies[1]).toBe(JSON.stringify({ p1_toon_id: 4 }));
   });
 });

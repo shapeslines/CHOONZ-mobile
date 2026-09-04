@@ -115,6 +115,17 @@ describe('LabContent rendered states', () => {
     expect(loading.queryByRole('button', { name: 'lab-run-golden' })).toBeNull();
   });
 
+  it('states the corpus engine revision the server declared, revision 2 included', async () => {
+    const revision1 = await render(<LabContent {...propsFor()} />);
+    expect(revision1.getByText(/engine\s+1/)).toBeTruthy();
+
+    const revision2 = await render(
+      <LabContent {...propsFor({ scenarios: { ...scenarios, engine_revision: '2' } })} />,
+    );
+    expect(revision2.getByText(/engine\s+2/)).toBeTruthy();
+    expect(revision2.getByText(/schema\s+1\.0/)).toBeTruthy();
+  });
+
   it('lists selectable scenarios and runs the unchanged golden', async () => {
     const props = propsFor();
     const view = await render(<LabContent {...props} />);
