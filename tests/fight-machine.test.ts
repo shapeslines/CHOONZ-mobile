@@ -91,9 +91,16 @@ describe('fight workflow machine', () => {
       gel: 'uv',
       fighterId: 'NYX',
       stageId: 'neon_alley',
+      engine: 'fight-v2',
     });
 
-    expect(configured.selection).toMatchObject({ toon, loadout, gel: 'uv', fighterId: 'NYX' });
+    expect(configured.selection).toMatchObject({
+      toon,
+      loadout,
+      gel: 'uv',
+      fighterId: 'NYX',
+      engine: 'fight-v2',
+    });
     expect(phaseOf(configured)).toBe('setup');
     expect(phaseOf(confirmMatch(configured, match('ready')))).toBe('ready');
     expect(phaseOf(confirmMatch(configured, match('active')))).toBe('active');
@@ -107,7 +114,12 @@ describe('fight workflow machine', () => {
     expect(() => beginCommand(pending, 'createMatch')).toThrow(IllegalFightCommandError);
     expect(() => selectToon(pending, toon)).toThrow(IllegalFightCommandError);
     expect(() => selectLoadout(pending, loadout, toon)).toThrow(IllegalFightCommandError);
-    expect(() => selectMatchOptions(pending, { gel: 'acid', fighterId: 'KAI', stageId: 'club_floor' })).toThrow(
+    expect(() => selectMatchOptions(pending, {
+        gel: 'acid',
+        fighterId: 'KAI',
+        stageId: 'club_floor',
+        engine: 'ah-scripted',
+      })).toThrow(
       IllegalFightCommandError,
     );
     expect(() => beginCommand(createFightWorkflow(), 'start')).toThrow(IllegalFightCommandError);

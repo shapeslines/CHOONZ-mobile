@@ -179,6 +179,22 @@ function optional<T>(
   return value === undefined ? undefined : decode(value, label);
 }
 
+/**
+ * A revision-2 additive key that the M5 server sends as an explicit `null`
+ * under `ah-scripted` (`docs/mobile-integration.md` "Engine revision 2 (M5)":
+ * `over`, per-side `state` / `legal_actions` / `move_costs` are "`null`
+ * otherwise"). Both an absent key and a `null` read as "the engine said
+ * nothing"; any other present value still goes through the strict decoder, so
+ * a wrongly-typed key still throws.
+ */
+function absentOrNull<T>(
+  value: unknown,
+  label: string,
+  decode: (item: unknown, itemLabel: string) => T,
+): T | undefined {
+  return value === undefined || value === null ? undefined : decode(value, label);
+}
+
 function numberValueRecord(value: unknown, label: string): Record<string, number> {
   return Object.fromEntries(
     Object.entries(record(value, label)).map(([key, item]) => [
@@ -459,9 +475,9 @@ function decodeFighterHud(value: unknown, label: string): FighterHud {
     x: nullableNumber(input.x, `${label}.x`),
     lift: nullableNumber(input.lift, `${label}.lift`),
     // fight-v2 additive per-side keys. Unknown keys (including `boxes`) stay ignored.
-    state: optional(input.state, `${label}.state`, string),
-    legal_actions: optional(input.legal_actions, `${label}.legal_actions`, stringArray),
-    move_costs: optional(input.move_costs, `${label}.move_costs`, numberValueRecord),
+    state: absentOrNull(input.state, `${label}.state`, string),
+    legal_actions: absentOrNull(input.legal_actions, `${label}.legal_actions`, stringArray),
+    move_costs: absentOrNull(input.move_costs, `${label}.move_costs`, numberValueRecord),
   };
 }
 
@@ -491,7 +507,7 @@ export function decodeMatchState(value: unknown): MatchState {
     extra: jsonRecord(input.extra, 'match state.extra'),
     // fight-v2 additive top-level keys; every other unknown key is still ignored.
     winner: optional(input.winner, 'match state.winner', nullableMatchResult),
-    over: optional(input.over, 'match state.over', boolean),
+    over: absentOrNull(input.over, 'match state.over', boolean),
     engine: optional(input.engine, 'match state.engine', matchEngine),
   };
 }

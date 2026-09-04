@@ -23,6 +23,7 @@ import type {
   LoadoutCreateInput,
   Match,
   MatchCreateInput,
+  MatchEngine,
   MatchState,
   Toon,
   ToonCreateInput,
@@ -43,7 +44,12 @@ interface FightContextValue {
   queryError: string | null;
   selectToonById: (toonId: number | null) => void;
   selectLoadoutById: (loadoutId: number | null) => void;
-  setMatchOptions: (options: { gel?: string; fighterId?: string; stageId?: string }) => void;
+  setMatchOptions: (options: {
+    gel?: string;
+    fighterId?: string;
+    stageId?: string;
+    engine?: MatchEngine;
+  }) => void;
   createToon: (input: ToonCreateInput) => Promise<void>;
   createLoadout: (input: LoadoutCreateInput) => Promise<void>;
   createMatch: () => Promise<void>;
@@ -287,7 +293,7 @@ function FightSessionProvider({
   );
 
   const setMatchOptions = useCallback(
-    (options: { gel?: string; fighterId?: string; stageId?: string }) => {
+    (options: { gel?: string; fighterId?: string; stageId?: string; engine?: MatchEngine }) => {
       const current = workflowRef.current;
       try {
         replaceWorkflow(
@@ -295,6 +301,7 @@ function FightSessionProvider({
             gel: options.gel ?? current.selection.gel,
             fighterId: options.fighterId ?? current.selection.fighterId,
             stageId: options.stageId ?? current.selection.stageId,
+            engine: options.engine ?? current.selection.engine,
           }),
         );
       } catch (reason) {
@@ -343,6 +350,9 @@ function FightSessionProvider({
       p1_fighter_id: selection.fighterId,
       stage_id: selection.stageId,
       seed: 0,
+      // Setup-local request only. The engine the match actually runs is read
+      // back from the confirmed `Match.engine`, never from this selection.
+      engine: selection.engine,
     };
     return run('createMatch', () => api.createMatch(input), async (match) => {
       queryClient.setQueryData(fightQueryKey(queryScope, 'match', String(match.id)), match);

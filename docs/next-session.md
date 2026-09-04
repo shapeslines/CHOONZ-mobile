@@ -1,40 +1,40 @@
 # CHOONZ-mobile — next session
 
-## State @ 2026-09-03 · lane choonzm-rev2-decoders
-Base = the trunk after the C1 deletion lane merged. This lane closes frontlog rank 5: the
-mechanics-lab identity decoder accepts engine revision `1` **or** `2` from a supported-revision list
-instead of a hard single-value gate; `Match` carries the additive `engine` (absent means
-`ah-scripted`, by contract, never inferred); a full `MatchState` read decodes the fight-v2 additive
-keys, which nothing renders yet. No manifest, lockfile, or CI change. Depth: standard.
+## State @ 2026-09-04 · lane choonzm-fightv2-ui
+Base = the trunk after the rev-2 decoder lane merged. This lane closes frontlog rank six: a two-value
+**Engine** selector (`ah-scripted` / `fight-v2`) on match setup, `createMatch` forwarding the choice,
+the ready card stating the engine the **server** froze, and a per-side engine `state` line plus an
+`over` signal on the HUD — rendered only when the confirmed state says `fight-v2`. No manifest,
+lockfile, or CI change. Depth: standard.
 
 ## Shipped
-- M-S3 earnable unlock UI + object-valued error `detail` [#50, merged]
-- C1 deletion close — per-status handling + §3 correction [#51, merged]
-- npm-audit review — exception re-scoped, decision row left unsigned [#52, merged]
-- rev-2 decoders — revision list gate + fight-v2 additive reads [PR open; do not merge]
+- C1 deletion close, and the npm-audit review whose decision row is still unsigned [both merged]
+- rev-2 decoders — revision list gate + fight-v2 additive reads [merged]
+- fight-v2 UI — engine selector, ready-card engine, HUD state/over [PR open; do not merge]
 
 ## Companion packet
-- changelog: [WORK-FRONTLOG.md](WORK-FRONTLOG.md) · summary: [groundwork.md](groundwork.md) · logging: inline/none · pickup: [plans/rev2-decoders.md](plans/rev2-decoders.md)
-- nuances: `boxes` is deliberately **not** decoded (no consumer, unknown keys already ignored);
-  `legal_actions` is `string[]`, not the `FightAction` union; a present key fails closed on a bad type.
+- changelog: [WORK-FRONTLOG.md](WORK-FRONTLOG.md) · summary: [groundwork.md](groundwork.md) · logging: inline/none · pickup: [plans/fightv2-ui.md](plans/fightv2-ui.md)
+- nuances: `over` is a **display signal only** — the workflow FSM, its transitions and the completion
+  path are untouched, `Match.status` stays the phase authority, and `legal_actions` / `move_costs` /
+  `boxes` stay decoded-but-unrendered on purpose.
 
 ## Signals
-- **state/flags:** local gates green — Vitest 90 → 97, Jest 53 → 54, typecheck, lint (0 warnings),
-  `expo:check`; lockfile untouched. **Hosted CI stays red on `main`**: its first step is `npm ci`
-  and the committed lockfile no longer reifies (it pins `@react-native/*` 0.86.2 against the
-  `react-native` 0.86.3 the manifest requires) — this lane installed from that committed lock.
-- **raised for custodian:** the lockfile drift, and the vault note's projection fields →
+- **state/flags:** local gates green — Vitest ninety-seven → one hundred, Jest fifty-four → sixty,
+  typecheck, lint (zero warnings), `expo:check`; lockfile untouched (`node_modules` junctioned).
+- **decoder correction landed here:** the backend sends the additive keys as an explicit `null` under
+  `ah-scripted`, not absent, so the prior lane's optional-only helper would have thrown on every full
+  read. `absentOrNull` reads absent and `null` alike; a bad type still fails closed. **Series is
+  untouched:** CHOONZ `app/schemas/series.py` on `main` has no `engine` field to mirror.
+- **raised for custodian:** the lockfile drift and the vault note's projection fields →
   [custodian-queue.md](custodian-queue.md) · **communicated:** mailbox on `choonz-mobile`.
-- **FOR /brain:** decode and HUD are separate gates — an additive field is decoded before it renders.
-- **DEFERRED:** `boxes` (engine M5); owner signature on the npm-audit exception; M1–M6 decisions.
+  **FOR /brain:** decode, then render, then correct — the render lane proved the null shape.
+  **DEFERRED:** engine affordance rendering; owner signature on the npm-audit exception.
 
 ## Next — FIRST action
-1. **fight-v2 UI lane** (`lane/choonzm-fightv2-ui/<date>`): engine selector on match setup, forward
-   `engine` in `createMatch`, and render `ann` / `state` / `over` on the fight screen — start once
-   CHOONZ M5 is merged.
-2. **Owner blocker (rank 1):** the lockfile drift — fix under a fresh dependency review so `npm ci`
-   reifies and hosted CI goes green, then reapprove the re-scoped npm-audit exception.
+1. **Mechanics-lab revision pin** (frontlog rank seven, gate met): the backend flipped its lab default
+   to revision two and the lab silently follows. Decide pin / selector / follow, and state it in the header.
+2. **Owner blocker (rank one):** the lockfile drift — `npm ci` does not reify, so hosted CI stays red;
+   fix under a fresh dependency review, then reapprove the re-scoped npm-audit exception.
 
 ## Queue
-- M1 store identity (`clubheavy.choonz`) + EAS profiles — owner decision, then the agent row.
-- Bot 409 `detail` decoding — blocked on CHOONZ `G-P2-MUTATE`.
+- Bot four-oh-nine `detail` decoding — backend mutate gate. Store identity, EAS profiles, auth providers, IAP — owner decisions.

@@ -22,7 +22,8 @@ folder is where each of those becomes one **claimable, fenced plan**.
 | Backend C1 `DELETE /me` → per-status deletion UI | Now | [c1-deletion-ui-close.md](c1-deletion-ui-close.md) | `src/app/profile.tsx`, `tests/{profile-screen.test.tsx,api.test.ts}`, `docs/store-readiness.md` | none | **done (#51)** — rank 3 (explainer + `privacy.tsx` owner-gated M5) |
 | Backend ARC686 P2 409 shape (D-P2-3) | Next | (after `G-P2-MUTATE`) | decoders, fight screens | backend gate | blocked |
 | **Backend ADR-0003 engine revision 2 (CHOONZ #135 M4) → decoders** | Now | [rev2-decoders.md](rev2-decoders.md) | `src/lib/{decoder,types}.ts`, `tests/{api,fight-api}.test.ts`, `tests/lab-screen.test.tsx` | none (M4 merged) | **done — rank 5** |
-| Engine revision 2 fight-v2 **HUD rendering** (`state`, `legal_actions`, `move_costs`, `boxes`) | Next | (after CHOONZ M5) | fight screens | backend gate | blocked |
+| **Engine revision 2 fight-v2 UI (CHOONZ M5) → engine selector + HUD reads** | Now | [fightv2-ui.md](fightv2-ui.md) | `src/lib/{decoder,fight-machine,fixture-match-service}.ts`, `src/providers/fight-provider.tsx`, `src/app/fight.tsx`, `tests/{fight-api,fight-machine,fight-screen,fixture-match-service}` | none (M5 merged) | **done — rank 6** (`legal_actions` / `move_costs` / `boxes` stay unrendered by design) |
+| Series `engine` mirror of `Match.engine` | Later | (after a CHOONZ `SeriesCreate.engine`) | `src/lib/{types,decoder}.ts`, series setup | backend gate | blocked — no field on CHOONZ `main` |
 | D13 / M1 store identity `clubheavy.choonz`, EAS profiles | Next | (owner) | `app.json`, `eas.json` | owner M1 | blocked |
 | D14 / M2–M3 providers | Next | (owner) | Supabase console, auth providers | owner | blocked |
 | P-S4 / M-S4 IAP; P-S5 / M-S5 assets | Later | — | RevenueCat, asset renderers | owner / Club Antics | blocked |

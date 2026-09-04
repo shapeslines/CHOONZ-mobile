@@ -1,5 +1,5 @@
 import type { ClientFailureKind } from '@/lib/errors';
-import type { Loadout, Match, MatchStatus, Toon } from '@/lib/types';
+import type { Loadout, Match, MatchEngine, MatchStatus, Toon } from '@/lib/types';
 
 export type FightPhase = 'setup' | MatchStatus;
 export type FightCommand =
@@ -27,6 +27,11 @@ export interface FightSelection {
   gel: string;
   fighterId: string;
   stageId: string;
+  /**
+   * Engine requested for the next `createMatch` call. Setup-local only — the
+   * engine a confirmed match actually runs is read from `Match.engine`.
+   */
+  engine: MatchEngine;
 }
 
 export interface FightFailure {
@@ -57,6 +62,7 @@ export function createFightWorkflow(): FightWorkflowState {
       gel: 'sodium',
       fighterId: 'AXEL',
       stageId: 'rooftop',
+      engine: 'ah-scripted',
     },
     match: null,
     pendingCommand: null,
@@ -134,7 +140,7 @@ export function selectLoadout(
 
 export function selectMatchOptions(
   state: FightWorkflowState,
-  options: Pick<FightSelection, 'gel' | 'fighterId' | 'stageId'>,
+  options: Pick<FightSelection, 'gel' | 'fighterId' | 'stageId' | 'engine'>,
 ): FightWorkflowState {
   if (!isLegalCommand(state, 'selectToon')) {
     throw new IllegalFightCommandError('selectToon', phaseOf(state));
