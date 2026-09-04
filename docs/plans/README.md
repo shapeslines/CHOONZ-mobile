@@ -23,7 +23,7 @@ folder is where each of those becomes one **claimable, fenced plan**.
 | Backend ARC686 P2 409 shape (D-P2-3) | Next | (after `G-P2-MUTATE`) | decoders, fight screens | backend gate | blocked |
 | **Backend ADR-0003 engine revision 2 (CHOONZ #135 M4) → decoders** | Now | [rev2-decoders.md](rev2-decoders.md) | `src/lib/{decoder,types}.ts`, `tests/{api,fight-api}.test.ts`, `tests/lab-screen.test.tsx` | none (M4 merged) | **done — rank 5** |
 | **Engine revision 2 fight-v2 UI (CHOONZ M5) → engine selector + HUD reads** | Now | [fightv2-ui.md](fightv2-ui.md) | `src/lib/{decoder,fight-machine,fixture-match-service}.ts`, `src/providers/fight-provider.tsx`, `src/app/fight.tsx`, `tests/{fight-api,fight-machine,fight-screen,fixture-match-service}` | none (M5 merged) | **done — rank 6** (`legal_actions` / `move_costs` / `boxes` stay unrendered by design) |
-| Series `engine` mirror of `Match.engine` | Later | (after a CHOONZ `SeriesCreate.engine`) | `src/lib/{types,decoder}.ts`, series setup | backend gate | blocked — no field on CHOONZ `main` |
+| **Series `engine` mirror of `Match.engine` (CHOONZ #142 M5b)** | Now | [fightv2-ui.md](fightv2-ui.md) §"Series follow-up (M5b)" | `src/lib/{types,decoder,api,fixture-match-service}.ts`, `tests/{fight-api,fixture-match-service}` | none (M5b merged) | **done — rank 7** (client contract only; this app still has no series screen to render it on) |
 | D13 / M1 store identity `clubheavy.choonz`, EAS profiles | Next | (owner) | `app.json`, `eas.json` | owner M1 | blocked |
 | D14 / M2–M3 providers | Next | (owner) | Supabase console, auth providers | owner | blocked |
 | P-S4 / M-S4 IAP; P-S5 / M-S5 assets | Later | — | RevenueCat, asset renderers | owner / Club Antics | blocked |

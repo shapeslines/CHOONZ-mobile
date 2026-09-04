@@ -15,6 +15,7 @@ import {
   decodeMechanicsScenarioList,
   decodeApiErrorDetail,
   decodeMySkins,
+  decodeSeries,
   decodeSkinUnlockCondition,
   decodeSkinUnlockReceipt,
   decodeSkinCatalog,
@@ -63,6 +64,8 @@ import type {
   MechanicsScenarioDetail,
   MechanicsScenarioList,
   MySkins,
+  Series,
+  SeriesCreateInput,
   SkinCatalog,
   SkinSelectionUpdateInput,
   SkinUnlockOutcome,
@@ -108,6 +111,7 @@ export interface ChoonzApi {
   getLoadouts(): Promise<Loadout[]>;
   createLoadout(input: LoadoutCreateInput): Promise<Loadout>;
   createMatch(input: MatchCreateInput): Promise<Match>;
+  createSeries(input: SeriesCreateInput): Promise<Series>;
   getMatch(matchId: number): Promise<Match>;
   startMatch(matchId: number): Promise<Match>;
   pauseMatch(matchId: number): Promise<Match>;
@@ -368,6 +372,10 @@ export class ChoonzApiClient implements ChoonzApi {
 
   createMatch(input: MatchCreateInput): Promise<Match> {
     return this.fromFightMode('/matches', decodeMatch, () => this.fixtures.createMatch(input), 'POST', input);
+  }
+
+  createSeries(input: SeriesCreateInput): Promise<Series> {
+    return this.fromFightMode('/series', decodeSeries, () => this.fixtures.createSeries(input), 'POST', input);
   }
 
   getMatch(matchId: number): Promise<Match> {

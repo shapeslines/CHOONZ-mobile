@@ -30,6 +30,7 @@ import type {
   MechanicsScenarioSummary,
   MechanicsVerdict,
   MySkins,
+  Series,
   Skin,
   SkinCatalog,
   SkinGrant,
@@ -165,6 +166,8 @@ const matchStatuses = ['ready', 'active', 'paused', 'completed', 'cancelled'] as
 const matchResults = ['p1', 'p2', 'draw'] as const;
 const ceremonyStates = ['round_call', 'fight_call', 'in_fight'] as const;
 const matchEngines = ['ah-scripted', 'fight-v2'] as const;
+const seriesStatuses = ['active', 'completed', 'cancelled'] as const;
+const seriesWinners = ['p1', 'p2'] as const;
 
 /**
  * Additive-field helper: an absent key stays absent, a present key is decoded
@@ -461,6 +464,37 @@ export function decodeMatch(value: unknown): Match {
     // Additive (CHOONZ #135 M4): an older server omits the key entirely, and
     // that absence — never a guess from any other field — means `ah-scripted`.
     engine: input.engine === undefined ? 'ah-scripted' : matchEngine(input.engine, 'match.engine'),
+  };
+}
+
+export function decodeSeries(value: unknown): Series {
+  const input = record(value, 'series');
+  return {
+    id: integer(input.id, 'series.id'),
+    best_of: integer(input.best_of, 'series.best_of'),
+    wins_needed: integer(input.wins_needed, 'series.wins_needed'),
+    p1_wins: integer(input.p1_wins, 'series.p1_wins'),
+    p2_wins: integer(input.p2_wins, 'series.p2_wins'),
+    status: literal(input.status, seriesStatuses, 'series.status'),
+    winner: input.winner === null ? null : literal(input.winner, seriesWinners, 'series.winner'),
+    p1_toon_id: integer(input.p1_toon_id, 'series.p1_toon_id'),
+    p2_toon_id: nullableInteger(input.p2_toon_id, 'series.p2_toon_id'),
+    p1_gel: string(input.p1_gel, 'series.p1_gel'),
+    p2_gel: string(input.p2_gel, 'series.p2_gel'),
+    p1_fighter_id: string(input.p1_fighter_id, 'series.p1_fighter_id'),
+    p2_fighter_id: string(input.p2_fighter_id, 'series.p2_fighter_id'),
+    stage_id: string(input.stage_id, 'series.stage_id'),
+    seed_base: integer(input.seed_base, 'series.seed_base'),
+    match_ids: array(input.match_ids, 'series.match_ids').map((item, index) =>
+      integer(item, `series.match_ids[${index}]`),
+    ),
+    open_match_id: nullableInteger(input.open_match_id, 'series.open_match_id'),
+    // Additive (CHOONZ #142 M5b), read exactly like `Match.engine`: a server
+    // from before M5b omits the key, and that absence — never a guess from a
+    // bout or any other field — means `ah-scripted`. A present-but-unknown
+    // value still fails closed.
+    engine:
+      input.engine === undefined ? 'ah-scripted' : matchEngine(input.engine, 'series.engine'),
   };
 }
 
