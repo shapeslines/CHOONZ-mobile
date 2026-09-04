@@ -9,6 +9,7 @@ import {
   decodeMechanicsReplayReceipt,
   decodeMechanicsScenarioDetail,
   decodeMechanicsScenarioList,
+  SUPPORTED_MECHANICS_ENGINE_REVISIONS,
 } from '../src/lib/decoder';
 import { ChoonzClientError, ResponseDecodeError } from '../src/lib/errors';
 
@@ -429,6 +430,29 @@ describe('CHOONZ mechanics lab client', () => {
         kind: 'response',
         status,
       });
+    }
+  });
+
+  it('accepts every supported engine revision and rejects the rest', () => {
+    expect(SUPPORTED_MECHANICS_ENGINE_REVISIONS).toEqual(['1', '2']);
+    for (const engine_revision of SUPPORTED_MECHANICS_ENGINE_REVISIONS) {
+      expect(decodeMechanicsScenarioList({ ...scenarioList, engine_revision })).toMatchObject({
+        engine_revision,
+      });
+      expect(decodeMechanicsScenarioDetail({ ...scenarioDetail, engine_revision })).toMatchObject({
+        engine_revision,
+      });
+      expect(decodeMechanicsReplayReceipt({ ...replayReceipt, engine_revision })).toMatchObject({
+        engine_revision,
+      });
+    }
+    for (const engine_revision of ['3', '', '2.0']) {
+      expect(() => decodeMechanicsScenarioList({ ...scenarioList, engine_revision })).toThrow(
+        ResponseDecodeError,
+      );
+      expect(() => decodeMechanicsReplayReceipt({ ...replayReceipt, engine_revision })).toThrow(
+        ResponseDecodeError,
+      );
     }
   });
 

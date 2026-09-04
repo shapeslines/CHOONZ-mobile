@@ -12,6 +12,7 @@ import type {
   KitMove,
   Loadout,
   Match,
+  MatchEngine,
   MatchResult,
   MatchState,
   MatchStatus,
@@ -163,6 +164,29 @@ function jsonValue(value: unknown, label: string): void {
 const matchStatuses = ['ready', 'active', 'paused', 'completed', 'cancelled'] as const;
 const matchResults = ['p1', 'p2', 'draw'] as const;
 const ceremonyStates = ['round_call', 'fight_call', 'in_fight'] as const;
+const matchEngines = ['ah-scripted', 'fight-v2'] as const;
+
+/**
+ * Additive-field helper: an absent key stays absent, a present key is decoded
+ * strictly. `undefined` is the only value that skips the decoder, so a wrong
+ * type — including an unexpected `null` — still fails closed.
+ */
+function optional<T>(
+  value: unknown,
+  label: string,
+  decode: (item: unknown, itemLabel: string) => T,
+): T | undefined {
+  return value === undefined ? undefined : decode(value, label);
+}
+
+function numberValueRecord(value: unknown, label: string): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(record(value, label)).map(([key, item]) => [
+      key,
+      number(item, `${label}.${key}`),
+    ]),
+  );
+}
 
 function literal<T extends string>(value: unknown, allowed: readonly T[], label: string): T {
   const next = string(value, label);
@@ -178,6 +202,10 @@ function matchStatus(value: unknown, label: string): MatchStatus {
 
 function nullableMatchResult(value: unknown, label: string): MatchResult | null {
   return value === null ? null : literal(value, matchResults, label);
+}
+
+function matchEngine(value: unknown, label: string): MatchEngine {
+  return literal(value, matchEngines, label);
 }
 
 export function decodeHealth(value: unknown): Health {
@@ -414,6 +442,9 @@ export function decodeMatch(value: unknown): Match {
     allowed_transitions: array(input.allowed_transitions, 'match.allowed_transitions').map(
       (item, index) => matchStatus(item, `match.allowed_transitions[${index}]`),
     ),
+    // Additive (CHOONZ #135 M4): an older server omits the key entirely, and
+    // that absence — never a guess from any other field — means `ah-scripted`.
+    engine: input.engine === undefined ? 'ah-scripted' : matchEngine(input.engine, 'match.engine'),
   };
 }
 
@@ -427,6 +458,10 @@ function decodeFighterHud(value: unknown, label: string): FighterHud {
     frame: nullableInteger(input.frame, `${label}.frame`),
     x: nullableNumber(input.x, `${label}.x`),
     lift: nullableNumber(input.lift, `${label}.lift`),
+    // fight-v2 additive per-side keys. Unknown keys (including `boxes`) stay ignored.
+    state: optional(input.state, `${label}.state`, string),
+    legal_actions: optional(input.legal_actions, `${label}.legal_actions`, stringArray),
+    move_costs: optional(input.move_costs, `${label}.move_costs`, numberValueRecord),
   };
 }
 
@@ -454,6 +489,10 @@ export function decodeMatchState(value: unknown): MatchState {
     ann: nullableString(input.ann, 'match state.ann'),
     sound_hooks: stringArray(input.sound_hooks, 'match state.sound_hooks'),
     extra: jsonRecord(input.extra, 'match state.extra'),
+    // fight-v2 additive top-level keys; every other unknown key is still ignored.
+    winner: optional(input.winner, 'match state.winner', nullableMatchResult),
+    over: optional(input.over, 'match state.over', boolean),
+    engine: optional(input.engine, 'match state.engine', matchEngine),
   };
 }
 
@@ -467,7 +506,12 @@ const mechanicsActions = ['light', 'heavy', 'special', 'block'] as const;
 
 const MECHANICS_SCHEMA_VERSION = '1.0';
 const MECHANICS_CORPUS_VERSION = '1';
-const MECHANICS_ENGINE_REVISION = '1';
+/**
+ * Engine revisions this client can render (CHOONZ #135 M4/M5). The list is the
+ * whole gate: anything outside it is rejected, so a revision 3 corpus fails
+ * closed rather than being drawn with revision 2 assumptions.
+ */
+export const SUPPORTED_MECHANICS_ENGINE_REVISIONS = ['1', '2'] as const;
 
 function mechanicsVerdict(value: unknown, label: string): MechanicsVerdict {
   return literal(value, mechanicsVerdicts, label);
@@ -512,7 +556,7 @@ function decodeMechanicsIdentity(input: RecordValue, label: string): MechanicsCo
     );
   }
   const engineRevision = string(input.engine_revision, `${label}.engine_revision`);
-  if (engineRevision !== MECHANICS_ENGINE_REVISION) {
+  if (!(SUPPORTED_MECHANICS_ENGINE_REVISIONS as readonly string[]).includes(engineRevision)) {
     throw new ResponseDecodeError(
       `${label}.engine_revision ${engineRevision} is not supported by this client.`,
     );

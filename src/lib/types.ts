@@ -141,6 +141,13 @@ export type MatchStatus = 'ready' | 'active' | 'paused' | 'completed' | 'cancell
 export type MatchResult = 'p1' | 'p2' | 'draw';
 export type FightAction = 'light' | 'heavy' | 'special' | 'block';
 
+/**
+ * Backend engine that owns a match (CHOONZ ADR-0003 engine revision 2, M4/M5).
+ * Older servers omit the field; the client reads that absence as `ah-scripted`.
+ * The client never infers the engine from any other field.
+ */
+export type MatchEngine = 'ah-scripted' | 'fight-v2';
+
 export interface MatchTelemetry {
   result: MatchResult;
   result_step: number;
@@ -175,6 +182,8 @@ export interface Match {
   share_token: string | null;
   telemetry: MatchTelemetry | null;
   allowed_transitions: MatchStatus[];
+  /** Additive (CHOONZ #135 M4). Absent on older servers → decoded as `ah-scripted`. */
+  engine?: MatchEngine;
 }
 
 export interface FighterHud {
@@ -185,6 +194,12 @@ export interface FighterHud {
   frame: number | null;
   x: number | null;
   lift: number | null;
+  /** fight-v2 additive: the side's engine state name. Absent under `ah-scripted`. */
+  state?: string;
+  /** fight-v2 additive: actions the engine will accept for this side right now. */
+  legal_actions?: string[];
+  /** fight-v2 additive: meter cost per action id. */
+  move_costs?: Record<string, number>;
 }
 
 export interface MatchState {
@@ -209,6 +224,12 @@ export interface MatchState {
   ann: string | null;
   sound_hooks: string[];
   extra: Record<string, unknown>;
+  /** fight-v2 additive: the decided winner once the match is over. */
+  winner?: MatchResult | null;
+  /** fight-v2 additive: whether the engine considers the match finished. */
+  over?: boolean;
+  /** fight-v2 additive: which engine produced this read. */
+  engine?: MatchEngine;
 }
 
 export interface MatchCreateInput {
@@ -225,6 +246,8 @@ export interface MatchCreateInput {
   p2_fighter_id?: string;
   stage_id?: string;
   seed?: number;
+  /** Optional engine request (CHOONZ #135 M4). Omitted → the server default. */
+  engine?: MatchEngine;
 }
 
 export interface MatchActInput {
