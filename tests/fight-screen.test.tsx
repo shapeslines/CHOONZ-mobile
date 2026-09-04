@@ -3,7 +3,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 
 import { FightContent, type FightContentProps } from '../src/app/fight';
 import { confirmMatch, createFightWorkflow } from '../src/lib/fight-machine';
-import type { Loadout, Match, MatchState, Toon } from '../src/lib/types';
+import type { Loadout, Match, MatchEngine, MatchState, Toon } from '../src/lib/types';
 
 const toon: Toon = {
   id: 4,
@@ -24,7 +24,7 @@ const loadout: Loadout = {
   is_default: true,
 };
 
-function match(status: Match['status']): Match {
+function match(status: Match['status'], engine: MatchEngine = 'ah-scripted'): Match {
   return {
     id: 19,
     series_id: null,
@@ -46,6 +46,7 @@ function match(status: Match['status']): Match {
     share_token: null,
     telemetry: null,
     allowed_transitions: [],
+    engine,
   };
 }
 
@@ -212,5 +213,83 @@ describe('FightContent rendered states', () => {
     expect(view.getByRole('alert', { name: 'Choose a valid Toon.' })).toBeTruthy();
     expect(view.getByText('Live catalog is temporarily unavailable.')).toBeTruthy();
     expect(view.getByRole('button', { name: 'fight-start' })).toBeTruthy();
+  });
+
+  it('offers both engines in setup and sends the chosen engine as a create option', async () => {
+    const props = propsFor('setup');
+    const view = await render(<FightContent {...props} />);
+
+    expect(view.getByRole('button', { name: 'select-engine-ah-scripted' }).props.accessibilityState.selected).toBe(
+      true,
+    );
+    const fightV2 = view.getByRole('button', { name: 'select-engine-fight-v2' });
+    expect(fightV2.props.accessibilityState.selected).toBe(false);
+    await fireEvent.press(fightV2);
+    expect(props.setMatchOptions).toHaveBeenCalledWith({ engine: 'fight-v2' });
+  });
+
+  it('marks the selected engine from the setup selection, not from a confirmed match', async () => {
+    const base = propsFor('setup');
+    const workflow = { ...base.workflow, selection: { ...base.workflow.selection, engine: 'fight-v2' as const } };
+    const view = await render(<FightContent {...propsFor('setup', { workflow })} />);
+
+    expect(view.getByRole('button', { name: 'select-engine-fight-v2' }).props.accessibilityState.selected).toBe(true);
+  });
+
+  it('states the confirmed match engine on the ready card', async () => {
+    const scripted = await render(<FightContent {...propsFor('ready')} />);
+    expect(scripted.getByText('ENGINE AH-SCRIPTED')).toBeTruthy();
+
+    const workflow = confirmMatch(createFightWorkflow(), match('ready', 'fight-v2'));
+    const v2 = await render(<FightContent {...propsFor('ready', { workflow })} />);
+    expect(v2.getByText('ENGINE FIGHT-V2')).toBeTruthy();
+  });
+
+  it('renders no fight-v2 HUD reads while the state says ah-scripted', async () => {
+    const view = await render(
+      <FightContent
+        {...propsFor('active', {
+          state: { ...hud, engine: 'ah-scripted', over: true, p1: { ...hud.p1, state: 'recover' } },
+        })}
+      />,
+    );
+
+    expect(view.queryByLabelText('engine-state-p1')).toBeNull();
+    expect(view.queryByLabelText('fightv2-over')).toBeNull();
+  });
+
+  it('renders the per-side engine state and the over signal under fight-v2', async () => {
+    const view = await render(
+      <FightContent
+        {...propsFor('active', {
+          state: {
+            ...hud,
+            engine: 'fight-v2',
+            over: true,
+            ann: 'K.O.',
+            p1: { ...hud.p1, state: 'recover' },
+            p2: { ...hud.p2, state: 'blockstun' },
+          },
+        })}
+      />,
+    );
+
+    expect(view.getByLabelText('engine-state-p1').props.children.join('')).toBe('STATE RECOVER');
+    expect(view.getByLabelText('engine-state-p2').props.children.join('')).toBe('STATE BLOCKSTUN');
+    expect(view.getByLabelText('fightv2-over')).toBeTruthy();
+    expect(view.getByText('K.O.')).toBeTruthy();
+    // The client never renders raw engine affordances.
+    expect(view.queryByLabelText('legal-actions-p1')).toBeNull();
+    // `over` is a display signal only — the phase still comes from the match.
+    expect(view.getByRole('button', { name: 'fight-heavy' })).toBeTruthy();
+  });
+
+  it('leaves the fight-v2 signals out when the engine key is absent', async () => {
+    const view = await render(
+      <FightContent {...propsFor('active', { state: { ...hud, over: true, p1: { ...hud.p1, state: 'idle' } } })} />,
+    );
+
+    expect(view.queryByLabelText('engine-state-p1')).toBeNull();
+    expect(view.queryByLabelText('fightv2-over')).toBeNull();
   });
 });

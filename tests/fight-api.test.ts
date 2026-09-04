@@ -280,6 +280,24 @@ describe('fight-v2 additive shapes', () => {
     ).toThrow(ResponseDecodeError);
   });
 
+  it('reads an explicit null revision-2 key as "the engine said nothing"', () => {
+    // M5 sends these as null (not absent) whenever the match runs ah-scripted.
+    const state = decodeMatchState({
+      ...statePayload(),
+      engine: 'ah-scripted',
+      over: null,
+      winner: null,
+      p1: { ...statePayload().p1, state: null, legal_actions: null, move_costs: null },
+    });
+
+    expect(state.engine).toBe('ah-scripted');
+    expect(state.over).toBeUndefined();
+    expect(state.winner).toBeNull();
+    expect(state.p1.state).toBeUndefined();
+    expect(state.p1.legal_actions).toBeUndefined();
+    expect(state.p1.move_costs).toBeUndefined();
+  });
+
   it('passes an engine request through the create body without inventing one', async () => {
     const bodies: (string | undefined)[] = [];
     const client = new ChoonzApiClient({

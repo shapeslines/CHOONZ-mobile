@@ -2,11 +2,27 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { phaseOf, type FightWorkflowState } from '@/lib/fight-machine';
-import type { FightAction, Loadout, MatchResult, MatchState, Toon } from '@/lib/types';
+import type {
+  FightAction,
+  Loadout,
+  MatchEngine,
+  MatchResult,
+  MatchState,
+  Toon,
+} from '@/lib/types';
 import { useFight } from '@/providers/fight-provider';
 import { useSkins } from '@/providers/skin-provider';
 import { AppScreen, BodyText, Panel, PanelTitle } from '@/ui/app-screen';
 import { fonts, gels, tokens, typeScale } from '@/ui/tokens';
+
+/**
+ * The two engines a match can be created against (CHOONZ engine revision 2).
+ * The label is presentation only; the value is the contract token.
+ */
+const engineOptions: readonly { value: MatchEngine; label: string }[] = [
+  { value: 'ah-scripted', label: 'SCRIPTED' },
+  { value: 'fight-v2', label: 'FIGHT-V2' },
+];
 
 export interface FightContentProps {
   accessEnabled: boolean;
@@ -21,7 +37,12 @@ export interface FightContentProps {
   queryError: string | null;
   selectToonById: (toonId: number | null) => void;
   selectLoadoutById: (loadoutId: number | null) => void;
-  setMatchOptions: (options: { gel?: string; fighterId?: string; stageId?: string }) => void;
+  setMatchOptions: (options: {
+    gel?: string;
+    fighterId?: string;
+    stageId?: string;
+    engine?: MatchEngine;
+  }) => void;
   createToon: (input: { name: string }) => Promise<void>;
   createLoadout: (input: {
     toon_id: number;
@@ -220,7 +241,7 @@ function SetupPanel({
   onCreateMatch: () => void;
   onSelectToon: (id: number | null) => void;
   onSelectLoadout: (id: number | null) => void;
-  onSetOptions: (options: { gel?: string; fighterId?: string; stageId?: string }) => void;
+  onSetOptions: (options: { gel?: string; fighterId?: string; stageId?: string; engine?: MatchEngine }) => void;
 }) {
   const canCreateMatch = selection.toon !== null || selection.loadout !== null;
   return (
@@ -327,6 +348,23 @@ function SetupPanel({
       </Panel>
 
       <Panel>
+        <PanelTitle>SETUP / ENGINE</PanelTitle>
+        <ChoiceGrid>
+          {engineOptions.map((option) => (
+            <Control
+              key={option.value}
+              label={`select-engine-${option.value}`}
+              selected={selection.engine === option.value}
+              disabled={disabled}
+              onPress={() => onSetOptions({ engine: option.value })}
+            >
+              {option.label}
+            </Control>
+          ))}
+        </ChoiceGrid>
+      </Panel>
+
+      <Panel>
         <PanelTitle>READY THE LOOP</PanelTitle>
         <BodyText>
           {selection.toon?.name ?? 'Select a Toon'} · {selection.loadout?.name ?? 'custom setup'} ·{' '}
@@ -358,6 +396,7 @@ function ReadyPanel({
         {match?.p1_fighter_id ?? 'P1'} vs {match?.p2_fighter_id ?? 'P2'} · {match?.stage_id ?? 'stage'} · seed{' '}
         {match?.seed ?? '—'}
       </BodyText>
+      <BodyText>ENGINE {(match?.engine ?? 'ah-scripted').toUpperCase()}</BodyText>
       <Control label="fight-start" disabled={disabled} onPress={onStart}>
         START
       </Control>
@@ -503,6 +542,9 @@ function Hud({ state }: { state: MatchState | null }) {
       </Panel>
     );
   }
+  // Revision-2 reads are additive and rendered only when the confirmed state
+  // says fight-v2 owns the match. Under `ah-scripted` the HUD is unchanged.
+  const fightV2 = state.engine === 'fight-v2';
   return (
     <Panel>
       <PanelTitle>AUTHORITATIVE HUD / STEP {state.last_step}</PanelTitle>
@@ -516,6 +558,7 @@ function Hud({ state }: { state: MatchState | null }) {
           pose={state.p1.pose}
           frame={state.p1.frame}
           gel={state.p1_gel}
+          engineState={fightV2 ? state.p1.state ?? null : null}
         />
         <HudFighter
           label="P2"
@@ -525,6 +568,7 @@ function Hud({ state }: { state: MatchState | null }) {
           pose={state.p2.pose}
           frame={state.p2.frame}
           gel={state.p2_gel}
+          engineState={fightV2 ? state.p2.state ?? null : null}
         />
       </View>
       <BarReadout bar={state.bar} />
@@ -540,6 +584,11 @@ function Hud({ state }: { state: MatchState | null }) {
           style={[styles.announcement, { color: theme.accent }]}
         >
           {state.ann}
+        </Text>
+      ) : null}
+      {fightV2 && state.over === true ? (
+        <Text accessibilityLabel="fightv2-over" style={[styles.hudMeta, { color: theme.text }]}>
+          ENGINE REPORTS ROUND OVER
         </Text>
       ) : null}
     </Panel>
@@ -596,6 +645,7 @@ function HudFighter({
   pose,
   frame,
   gel,
+  engineState = null,
 }: {
   label: string;
   hp: number;
@@ -604,6 +654,8 @@ function HudFighter({
   pose: string | null;
   frame: number | null;
   gel: string;
+  /** fight-v2 only: the side's engine state name, already read from the HUD. */
+  engineState?: string | null;
 }) {
   const { theme } = useSkins();
   const palette = (gels as Record<string, { hot: string; mid: string }>)[gel] ?? {
@@ -623,6 +675,14 @@ function HudFighter({
         <Text style={[styles.hudMeta, { color: theme.muted }]}>
           POSE {pose.toUpperCase()}
           {frame !== null ? ` / F${frame}` : ''}
+        </Text>
+      ) : null}
+      {engineState ? (
+        <Text
+          accessibilityLabel={`engine-state-${label.toLowerCase()}`}
+          style={[styles.hudMeta, { color: theme.muted }]}
+        >
+          STATE {engineState.toUpperCase()}
         </Text>
       ) : null}
     </View>

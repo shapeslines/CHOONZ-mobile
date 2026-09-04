@@ -201,6 +201,9 @@ export class FixtureMatchService {
       share_token: null,
       telemetry: null,
       allowed_transitions: nextTransitions('ready'),
+      // The fixture server echoes the requested engine and falls back to the
+      // contract default, exactly as the decoder reads an omitted key.
+      engine: input.engine ?? 'ah-scripted',
     };
     this.matches.set(id, { match, tape: [] });
     return clone(match);
