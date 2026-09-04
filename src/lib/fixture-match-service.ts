@@ -18,6 +18,8 @@ import type {
   MatchState,
   MatchStatus,
   MatchTickInput,
+  Series,
+  SeriesCreateInput,
   Toon,
   ToonCreateInput,
 } from '@/lib/types';
@@ -72,6 +74,8 @@ export class FixtureMatchService {
   private nextToonId = Math.max(...fixtureToons.map((toon) => toon.id)) + 1;
   private nextLoadoutId = Math.max(...fixtureLoadouts.map((loadout) => loadout.id)) + 1;
   private nextMatchId = 1;
+  private readonly seriesRecords = new Map<number, Series>();
+  private nextSeriesId = 1;
 
   async getToons(): Promise<Toon[]> {
     return clone(this.toons);
@@ -207,6 +211,76 @@ export class FixtureMatchService {
     };
     this.matches.set(id, { match, tape: [] });
     return clone(match);
+  }
+
+  /**
+   * A fixture best-of-N series and its first bout. The engine is stamped on
+   * that bout and the series reads it back **from the bout**, never from the
+   * request — the same derivation the server does, so a fixture series and a
+   * live one agree about who is the authority (CHOONZ #142 M5b).
+   */
+  async createSeries(input: SeriesCreateInput): Promise<Series> {
+    const bestOf = input.best_of ?? 3;
+    if (bestOf !== 3 && bestOf !== 5) {
+      responseError(422, 'best_of must be 3 or 5.');
+    }
+    requireInteger(input.p1_toon_id, 'p1_toon_id');
+    this.getToon(input.p1_toon_id);
+    if (input.p2_toon_id !== undefined && input.p2_toon_id !== null) {
+      this.getToon(input.p2_toon_id);
+    }
+
+    const p1Gel = input.p1_gel ?? 'sodium';
+    const p2Gel = input.p2_gel ?? 'red';
+    const p1FighterId = input.p1_fighter_id ?? 'AXEL';
+    const p2FighterId = input.p2_fighter_id ?? 'VEX';
+    const stageId = input.stage_id ?? 'rooftop';
+    const seedBase = input.seed_base ?? 0;
+    this.validateCatalogChoice(p1Gel, p1FighterId, stageId);
+    this.validateCatalogChoice(p2Gel, p2FighterId, stageId);
+    requireInteger(seedBase, 'seed_base');
+    if (seedBase < 0) {
+      responseError(422, 'seed_base must be non-negative.');
+    }
+
+    const bout = await this.createMatch({
+      p1_toon_id: input.p1_toon_id,
+      p2_toon_id: input.p2_toon_id ?? null,
+      p1_gel: p1Gel,
+      p2_gel: p2Gel,
+      p1_fighter_id: p1FighterId,
+      p2_fighter_id: p2FighterId,
+      stage_id: stageId,
+      seed: seedBase,
+      enforce_one_gel: input.enforce_one_gel,
+      allow_gel_split: input.allow_gel_split,
+      engine: input.engine,
+    });
+
+    const id = this.nextSeriesId++;
+    this.getRecord(bout.id).match.series_id = id;
+    const series: Series = {
+      id,
+      best_of: bestOf,
+      wins_needed: Math.floor(bestOf / 2) + 1,
+      p1_wins: 0,
+      p2_wins: 0,
+      status: 'active',
+      winner: null,
+      p1_toon_id: input.p1_toon_id,
+      p2_toon_id: input.p2_toon_id ?? null,
+      p1_gel: p1Gel,
+      p2_gel: p2Gel,
+      p1_fighter_id: p1FighterId,
+      p2_fighter_id: p2FighterId,
+      stage_id: stageId,
+      seed_base: seedBase,
+      match_ids: [bout.id],
+      open_match_id: bout.id,
+      engine: bout.engine,
+    };
+    this.seriesRecords.set(id, series);
+    return clone(series);
   }
 
   async getMatch(matchId: number): Promise<Match> {

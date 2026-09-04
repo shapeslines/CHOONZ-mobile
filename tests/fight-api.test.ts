@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ChoonzApiClient, type FetchLike } from '../src/lib/api';
 import { resolveAppConfig } from '../src/lib/config';
-import { decodeMatch, decodeMatchState } from '../src/lib/decoder';
+import { decodeMatch, decodeMatchState, decodeSeries } from '../src/lib/decoder';
 import { ResponseDecodeError } from '../src/lib/errors';
 
 const apiConfig = resolveAppConfig(
@@ -313,6 +313,84 @@ describe('fight-v2 additive shapes', () => {
       engine: 'fight-v2',
     });
     await client.createMatch({ p1_toon_id: 4 });
+
+    expect(bodies[0]).toBe(JSON.stringify({ p1_toon_id: 4, engine: 'fight-v2' }));
+    expect(bodies[1]).toBe(JSON.stringify({ p1_toon_id: 4 }));
+  });
+});
+
+// --------------------------------------------------------------------------- //
+// Series engine (CHOONZ #142 M5b) — one engine per series, derived, never
+// inferred by the client.
+// --------------------------------------------------------------------------- //
+
+function seriesPayload() {
+  return {
+    id: 7,
+    best_of: 3,
+    wins_needed: 2,
+    p1_wins: 0,
+    p2_wins: 0,
+    status: 'active',
+    winner: null,
+    p1_toon_id: 4,
+    p2_toon_id: null,
+    p1_gel: 'sodium',
+    p2_gel: 'red',
+    p1_fighter_id: 'AXEL',
+    p2_fighter_id: 'VEX',
+    stage_id: 'rooftop',
+    seed_base: 0,
+    match_ids: [19],
+    open_match_id: 19,
+  };
+}
+
+describe('series engine', () => {
+  it('defaults Series.engine to ah-scripted when a pre-M5b server omits the key', () => {
+    const older = seriesPayload();
+    expect('engine' in older).toBe(false);
+    expect(decodeSeries(older).engine).toBe('ah-scripted');
+  });
+
+  it('decodes a declared Series.engine and fails closed on a bad one', () => {
+    expect(decodeSeries({ ...seriesPayload(), engine: 'fight-v2' }).engine).toBe('fight-v2');
+    expect(decodeSeries({ ...seriesPayload(), engine: 'ah-scripted' }).engine).toBe('ah-scripted');
+    expect(() => decodeSeries({ ...seriesPayload(), engine: 'fight-v3' })).toThrow(
+      ResponseDecodeError,
+    );
+    expect(() => decodeSeries({ ...seriesPayload(), engine: null })).toThrow(ResponseDecodeError);
+    expect(() => decodeSeries({ ...seriesPayload(), engine: 2 })).toThrow(ResponseDecodeError);
+  });
+
+  it('decodes the rest of the series shape strictly', () => {
+    const series = decodeSeries({ ...seriesPayload(), status: 'completed', winner: 'p2' });
+    expect(series).toMatchObject({ id: 7, best_of: 3, status: 'completed', winner: 'p2' });
+    expect(series.match_ids).toEqual([19]);
+    expect(() => decodeSeries({ ...seriesPayload(), status: 'ready' })).toThrow(
+      ResponseDecodeError,
+    );
+    expect(() => decodeSeries({ ...seriesPayload(), winner: 'draw' })).toThrow(
+      ResponseDecodeError,
+    );
+  });
+
+  it('forwards an engine request through the createSeries body without inventing one', async () => {
+    const bodies: (string | undefined)[] = [];
+    const client = new ChoonzApiClient({
+      config: apiConfig,
+      getAccessToken: async () => 'token-7',
+      fetcher: async (input, init) => {
+        expect(input).toBe('https://api.choonz.example/series');
+        bodies.push(typeof init?.body === 'string' ? init.body : undefined);
+        return Response.json({ ...seriesPayload(), engine: 'fight-v2' });
+      },
+    });
+
+    await expect(client.createSeries({ p1_toon_id: 4, engine: 'fight-v2' })).resolves.toMatchObject(
+      { engine: 'fight-v2' },
+    );
+    await client.createSeries({ p1_toon_id: 4 });
 
     expect(bodies[0]).toBe(JSON.stringify({ p1_toon_id: 4, engine: 'fight-v2' }));
     expect(bodies[1]).toBe(JSON.stringify({ p1_toon_id: 4 }));

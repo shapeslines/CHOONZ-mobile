@@ -96,6 +96,34 @@ display signal on the HUD — without the client ever inferring an engine, a pha
       `state` + `over` + `ann` and still shows the active controls; `ah-scripted` and an absent
       `engine` render neither signal; fixture echo + rematch inheritance; the `null` key read.
 - [x] S7 Docs: this plan, bridge row, frontlog rank 5, `docs/next-session.md`.
+- [x] S8 **Series follow-up (M5b)** on lane `lane/choonzm-series-engine/20260904` — see below.
+
+## Series follow-up (M5b)
+
+CHOONZ #142 (`bb3cd30`) landed `SeriesCreate.engine` / `SeriesRead.engine` **after** this plan's
+"Held questions" recorded the gap, so the blocked bridge row became buildable and was built on
+`lane/choonzm-series-engine/20260904`.
+
+**What the backend decided.** `POST /series` takes the same closed `ah-scripted` | `fight-v2` enum
+with the same `422`. The id is stamped on the series' **first bout**, and every later bout
+(`POST /series/{id}/next`) inherits it from the newest bout — **one series is frozen to one engine**,
+with no per-bout override. `SeriesRead.engine` echoes on create, get, list and cancel, and is
+*derived* from the newest bout rather than stored, so a pre-M5b series (or one with no bout at all)
+reads back as `"ah-scripted"`.
+
+**What the client landed.** `Series` / `SeriesCreateInput` / `SeriesStatus` / `SeriesWinner` in
+`types.ts`; `decodeSeries` with the **explicit `ah-scripted` default when the key is absent** —
+`decodeMatch`'s pattern exactly, and a present-but-bad value (`'fight-v3'`, `null`, a number) still
+throws `ResponseDecodeError`; `ChoonzApi.createSeries` posting `/series` and forwarding `engine?`
+untouched; `FixtureMatchService.createSeries` spawning the first bout with the requested engine,
+linking its `series_id`, and reading the series' own `engine` **back off that bout** — so the
+fixture derives it the way the server does instead of echoing the request.
+
+**What it deliberately did not land.** This client has **no series surface at all** — no screen, no
+route, no card, no provider, and `series_id` is the only series word anywhere in `src/`. There is no
+series card to print `ENGINE <id>` on and no series setup screen to pass a selection from; inventing
+one to hang a label on would be a product decision this lane does not own. The engine now rides the
+contract, and the first series screen renders it the way the ready card renders `Match.engine`.
 
 ## Acceptance
 
@@ -112,8 +140,11 @@ untouched (the worktree junctioned `node_modules` from the main checkout).
 - **Series was not built — the backend field does not exist.** `git show origin/main:app/schemas/series.py`
   on CHOONZ has no `engine`; the M5 addendum documents `MatchRead.engine` and `SpectateRead.match.engine`
   and says nothing about a series. Mirroring the pattern speculatively would have the client
-  declaring a contract the server has not made. **Open:** does a series freeze one engine for all its
-  matches, or does each match choose? That is a backend decision; the client follows it.
+  declaring a contract the server has not made. ~~**Open:** does a series freeze one engine for all
+  its matches, or does each match choose?~~ **Resolved 2026-09-04 by CHOONZ #142 (M5b):** a series
+  **freezes one engine** — stamped on the first bout, inherited by every later bout, no per-bout
+  override, and `SeriesRead.engine` derived from the newest bout. The client followed it in the
+  "Series follow-up (M5b)" section above.
 - **`over` is a signal, not a transition.** The client shows it and changes nothing else. If a
   future lane wants `over` to drive the round-end ceremony, that is a `fight-machine.ts` change with
   its own gate — the confirmed `Match.status` stays the phase authority either way.
