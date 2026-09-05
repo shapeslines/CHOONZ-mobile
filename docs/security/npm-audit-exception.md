@@ -3,6 +3,15 @@
 Status: `ACCEPTED FOR REVIEW-ONLY` (time-bounded) — this is not deployment
 approval and grants no EAS, store, native-build, or production-web authority.
 
+## Record — 2026-09-04 · lockfile re-lock
+
+Owner-authorized regeneration of `package-lock.json` under a fresh dependency review. Full evidence:
+[`lockfile-relock-2026-09.md`](lockfile-relock-2026-09.md).
+
+| Date | Change | Audit before → after | Effect on this record |
+| --- | --- | --- | --- |
+| 2026-09-04 | `package-lock.json` regenerated from `package.json` + `.npmrc` with no prior lock. `package.json` **unchanged** (SHA-256 `c9ef9b7b…71e319`); no `overrides` added. Seven direct dependencies move by patch inside their declared ranges, closing the `@react-native/jest-preset` / `js-polyfills` `0.86.2` skew under `react-native@0.86.3`. New lock 609,280 bytes, SHA-256 `0929e012…f1622a8`. | 13 moderate / 0 high / 0 critical → **13 moderate / 0 high / 0 critical**; the same two leaf advisories (GHSA-vcc3-ghjq-m6fr, GHSA-w5hq-g745-h8pq); **no new advisory id**; `image-size` still absent from both tree and lock | Triggers mandatory reapproval (lockfile change). The unsigned decision row below is bound to the **old** lock hash `2bb911d7…12a6c508c` — reapprove against the new hash instead. **Corrects** the review's "`npm ci` does not reify" finding: it does reify inside the checkout; the failure came from an isolated copy that dropped the tracked `.npmrc` (`legacy-peer-deps=true`). Red hosted CI on `main` is a runner/billing failure (two seconds, zero recorded steps), not the install step. |
+
 ## Review record — 2026-09-03
 
 Discharges the standing "review by 2026-09-10" clause. **Evidence only — no dependency, lockfile,

@@ -1,40 +1,40 @@
 # CHOONZ-mobile — next session
 
-## State @ 2026-09-04 · lane choonzm-series-engine
-Base = the trunk after the fight-v2 UI lane merged. This lane closes the last blocked bridge row:
-the backend froze **one engine per series**, so the client now carries the series contract —
-`Series` / `SeriesCreateInput` types, `decodeSeries` defaulting an absent `engine` to the scripted
-port, `createSeries` forwarding the choice, and a fixture series whose first bout carries the engine
-the series reads back from. No manifest, lockfile, or CI change. Depth: standard.
+## State @ 2026-09-04 · lane choonzm-lockfile
+Base = the trunk after the series-engine lane. Owner authorized regenerating `package-lock.json`
+under a fresh dependency review, so this lane re-locked it: `package.json` is untouched, seven
+direct dependencies move by patch inside ranges they already declared, and the `@react-native/*`
+skew under React Native is closed. Audit is flat — thirteen moderate, no high, no critical, same
+two leaf advisories, `image-size` absent.
 
 ## Shipped
-- C1 deletion close, and the npm-audit review whose decision row is still unsigned [both merged]
-- rev-2 decoders, then the fight-v2 UI — selector, ready-card engine, HUD state/over [merged]
-- series engine contract — decode, forward, fixture [PR open; do not merge]
+- series engine contract, fight-v2 UI, rev-2 decoders, C1 deletion close [merged]
+- lockfile re-lock plus its security record [PR open; **owner merges, not the lane**]
 
 ## Companion packet
-- changelog: [WORK-FRONTLOG.md](WORK-FRONTLOG.md) · summary: [groundwork.md](groundwork.md) · logging: inline/none · pickup: [plans/fightv2-ui.md](plans/fightv2-ui.md) §"Series follow-up"
-- nuances: the fixture derives the series `engine` **off its first bout**, not off the request, so it
-  agrees with the server about who is the authority. A present-but-unknown value still fails closed.
+- changelog: [WORK-FRONTLOG.md](WORK-FRONTLOG.md) · summary: [groundwork.md](groundwork.md) ·
+  logging: inline/none · pickup: [security/lockfile-relock-2026-09.md](security/lockfile-relock-2026-09.md)
+- nuances: the tracked `.npmrc` carries `legacy-peer-deps=true` and the whole resolution rests on
+  it. Copy it alongside any install proof, or npm resolves peers strictly, demands the newer React
+  Native line, and drags the vulnerable image parser back.
 
 ## Signals
-- **state/flags:** local gates green — Vitest one hundred → one hundred and five, Jest sixty
-  unchanged, typecheck, lint (zero warnings), `expo:check`; lockfile untouched (junctioned modules).
-- **scope correction worth knowing:** this app has **no series surface at all** — no screen, route,
-  card, or provider, and `series_id` is the only series word in `src/`. The brief asked for an
-  `ENGINE <id>` line on a series card and an engine passed from a series setup screen; neither
-  exists, so the lane landed the contract only. The first series screen renders it the way the ready
-  card renders the match engine.
-- **raised for custodian:** the lockfile drift and the vault note's projection fields →
-  [custodian-queue.md](custodian-queue.md) · **communicated:** mailbox on `choonz-mobile`.
-  **FOR /brain:** a contract can land ahead of its surface — decode first, render when a screen
-  earns it. **DEFERRED:** the series screen; engine affordances; the npm-audit owner signature.
+- **state/flags:** six gates green on the re-locked tree — `npm ci`, typecheck, lint, Vitest one
+  hundred and five, Jest sixty, `expo:check`. Audit identical before and after. Depth: standard.
+- **two corrections:** "`npm ci` cannot reify" is a method artifact — it reifies inside the
+  checkout; the earlier proof ran in a bare copy without `.npmrc`. And red hosted CI on `main` is
+  a runner/billing failure (job ends in two seconds, no steps recorded), so re-locking does **not**
+  turn CI green.
+- **raised for custodian:** the unsigned npm-audit decision row is bound to a stale lockfile hash
+  and must be reapproved against the new one → [custodian-queue.md](custodian-queue.md).
+  **FOR /brain:** prove an install in the checkout, not a copy — dropping a dotfile invents drift.
+  **DEFERRED:** the owner signature; Dependabot alert state; `expo:doctor` and the web export.
 
 ## Next — FIRST action
-1. **Mechanics-lab revision pin** (frontlog rank eight, gate met): the backend flipped its lab default
-   to revision two and the lab silently follows. Decide pin / selector / follow, and state it in the header.
-2. **Owner blocker (rank one):** the lockfile drift — `npm ci` does not reify, so hosted CI stays red;
-   fix under a fresh dependency review, then reapprove the re-scoped npm-audit exception.
+1. **Mechanics-lab revision pin** (frontlog rank eight, gate met): the backend flipped its lab
+   default to revision two and the client silently follows. Decide pin / selector / follow and
+   state the revision in the lab header either way.
+2. **Awaiting owner merge:** the lockfile PR, and with it the reapproval of the re-scoped npm-audit exception against the new lockfile hash.
 
 ## Queue
-- Bot four-oh-nine `detail` decoding — backend mutate gate. Store identity, EAS profiles, auth providers, IAP — owner decisions.
+- Bot four-oh-nine `detail` decoding — backend mutate gate. Store identity, EAS, auth providers, IAP — owner.

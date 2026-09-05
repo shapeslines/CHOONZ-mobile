@@ -17,7 +17,7 @@ folder is where each of those becomes one **claimable, fenced plan**.
 | Backend P-S1 catalog → **M-S1** | (landed) | — | `src/lib/skins.ts`, decoders | — | ✅ #34 |
 | Backend P-S2 selection → **M-S2** | (landed) | — | `SkinProvider`, `src/app/skins.tsx` | — | ✅ #35 |
 | **Backend P-S3 unlock (CHOONZ #125) → M-S3 + object `detail`** | Now | [m-s3-earnable-ui.md](m-s3-earnable-ui.md) | `src/lib/{errors,api,decoder,types,fixtures,fixture-match-service}.ts`, `skin-provider.tsx`, `skins.tsx`, tests | none | ✅ #50 |
-| Lockfile reify failure found by the 2026-09 audit review | Now | (owner; fresh dependency review) | `package.json`, `package-lock.json` | owner | **blocked — rank 1** |
+| Lockfile skew found by the 2026-09 audit review | Now | [security/lockfile-relock-2026-09.md](../security/lockfile-relock-2026-09.md) — a security record, not a plan file | `package-lock.json`, `docs/security/**` | owner (authorized 2026-09-04) | **PR open — owner merge, rank 1** |
 | `security/npm-audit-exception.md` review clause | Now | [npm-audit-review-2026-09.md](npm-audit-review-2026-09.md) | docs-only (no manifest change) | time (was 2026-09-10) | **done (#52) — awaiting owner reapproval**, rank 2 |
 | Backend C1 `DELETE /me` → per-status deletion UI | Now | [c1-deletion-ui-close.md](c1-deletion-ui-close.md) | `src/app/profile.tsx`, `tests/{profile-screen.test.tsx,api.test.ts}`, `docs/store-readiness.md` | none | **done (#51)** — rank 3 (explainer + `privacy.tsx` owner-gated M5) |
 | Backend ARC686 P2 409 shape (D-P2-3) | Next | (after `G-P2-MUTATE`) | decoders, fight screens | backend gate | blocked |
