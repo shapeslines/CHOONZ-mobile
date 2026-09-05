@@ -361,6 +361,92 @@ describe('CHOONZ mechanics lab client', () => {
     expect(body).toEqual({ scenario_id: 'seed0-classic' });
   });
 
+  it('sends no engine_revision at all when the lab follows the server default', async () => {
+    const urls: string[] = [];
+    const bodies: unknown[] = [];
+    const client = new ChoonzApiClient({
+      config: mechanicsApiConfig(),
+      getAccessToken: async () => 'access-token',
+      fetcher: async (input, init) => {
+        urls.push(String(input));
+        bodies.push(init?.body ? JSON.parse(String(init.body)) : undefined);
+        return Response.json(String(input).endsWith('/replay') ? replayReceipt : scenarioList);
+      },
+    });
+
+    await client.getMechanicsScenarios();
+    await client.replayMechanics('seed0-classic');
+
+    for (const url of urls) {
+      expect(url).not.toContain('engine_revision');
+    }
+    expect(bodies[1]).toEqual({ scenario_id: 'seed0-classic' });
+  });
+
+  it('pins every supported revision on the list, the detail and the replay body', async () => {
+    for (const revision of ['1', '2'] as const) {
+      const urls: string[] = [];
+      let body: unknown;
+      const client = new ChoonzApiClient({
+        config: mechanicsApiConfig(),
+        getAccessToken: async () => 'access-token',
+        fetcher: async (input, init) => {
+          const url = String(input);
+          urls.push(url);
+          if (url.includes('/replay')) {
+            body = init?.body ? JSON.parse(String(init.body)) : undefined;
+            return Response.json({ ...replayReceipt, engine_revision: revision });
+          }
+          if (url.includes('/scenarios/')) {
+            return Response.json({ ...scenarioDetail, engine_revision: revision });
+          }
+          return Response.json({ ...scenarioList, engine_revision: revision });
+        },
+      });
+
+      await expect(client.getMechanicsScenarios(revision)).resolves.toMatchObject({
+        engine_revision: revision,
+      });
+      await expect(client.getMechanicsScenario('seed0-classic', revision)).resolves.toMatchObject({
+        engine_revision: revision,
+      });
+      await expect(
+        client.replayMechanics('seed0-classic', { seed: 42 }, revision),
+      ).resolves.toMatchObject({ engine_revision: revision });
+
+      expect(urls[0]).toBe(
+        `https://api.choonz.example/mechanics/scenarios?engine_revision=${revision}`,
+      );
+      expect(urls[1]).toBe(
+        `https://api.choonz.example/mechanics/scenarios/seed0-classic?engine_revision=${revision}`,
+      );
+      expect(urls[2]).toBe('https://api.choonz.example/mechanics/replay');
+      expect(body).toEqual({
+        scenario_id: 'seed0-classic',
+        overrides: { seed: 42 },
+        engine_revision: revision,
+      });
+    }
+  });
+
+  it('preserves the indistinguishable 404 when a pinned revision is not served', async () => {
+    let url = '';
+    const client = new ChoonzApiClient({
+      config: mechanicsApiConfig(),
+      getAccessToken: async () => 'access-token',
+      fetcher: async (input) => {
+        url = String(input);
+        return new Response(null, { status: 404 });
+      },
+    });
+
+    await expect(client.getMechanicsScenarios('1')).rejects.toMatchObject({
+      kind: 'response',
+      status: 404,
+    });
+    expect(url).toBe('https://api.choonz.example/mechanics/scenarios?engine_revision=1');
+  });
+
   it('fails locally for ineligible configurations before observing URL, token, or fetcher', async () => {
     const ineligibleConfigs = [
       resolveAppConfig({}, false),
