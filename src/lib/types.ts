@@ -316,6 +316,14 @@ export interface MatchCompleteInput {
 
 export type MechanicsVerdict = 'pass' | 'fail' | 'not_applicable';
 
+/**
+ * A revision the lab may pin explicitly on a request (CHOONZ M5). An absent pin
+ * means "whatever the server serves", which is why this union has no `server`
+ * member. The decoded `MechanicsCorpusIdentity.engine_revision` stays the only
+ * authority for what a response actually is.
+ */
+export type MechanicsEngineRevision = '1' | '2';
+
 export interface MechanicsCorpusIdentity {
   schema_version: string;
   corpus_version: string;

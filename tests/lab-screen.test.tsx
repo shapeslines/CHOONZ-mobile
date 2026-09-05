@@ -73,6 +73,8 @@ function receipt(overrides: Partial<MechanicsReplayReceipt> = {}): MechanicsRepl
 function propsFor(overrides: Partial<LabContentProps> = {}): LabContentProps {
   return {
     access: 'eligible',
+    revision: 'server',
+    onSelectRevision: jest.fn(),
     scenarios,
     scenariosPending: false,
     scenariosError: null,
@@ -124,6 +126,65 @@ describe('LabContent rendered states', () => {
     );
     expect(revision2.getByText(/engine\s+2/)).toBeTruthy();
     expect(revision2.getByText(/schema\s+1\.0/)).toBeTruthy();
+  });
+
+  it('offers SERVER / 1 / 2, defaults to SERVER, and forwards the pin the operator picks', async () => {
+    const props = propsFor();
+    const view = await render(<LabContent {...props} />);
+
+    expect(view.getByText('LAB / ENGINE REVISION')).toBeTruthy();
+    expect(view.getByTestId('select-lab-revision-server').props.accessibilityState.selected).toBe(
+      true,
+    );
+    expect(view.getByTestId('select-lab-revision-1').props.accessibilityState.selected).toBe(false);
+    expect(view.getByTestId('select-lab-revision-2').props.accessibilityState.selected).toBe(false);
+
+    await fireEvent.press(view.getByTestId('select-lab-revision-1'));
+    expect(props.onSelectRevision).toHaveBeenCalledWith('1');
+    await fireEvent.press(view.getByTestId('select-lab-revision-2'));
+    expect(props.onSelectRevision).toHaveBeenCalledWith('2');
+    await fireEvent.press(view.getByTestId('select-lab-revision-server'));
+    expect(props.onSelectRevision).toHaveBeenCalledWith('server');
+  });
+
+  it('marks the pinned choice without ever letting it speak for the declared revision', async () => {
+    const view = await render(
+      <LabContent
+        {...propsFor({ revision: '1', scenarios: { ...scenarios, engine_revision: '2' } })}
+      />,
+    );
+
+    expect(view.getByTestId('select-lab-revision-1').props.accessibilityState.selected).toBe(true);
+    expect(view.getByTestId('select-lab-revision-server').props.accessibilityState.selected).toBe(
+      false,
+    );
+    // The header states what the server declared (2), not what was asked for (1).
+    expect(view.getByText('schema 1.0 · corpus 1 · engine 2')).toBeTruthy();
+  });
+
+  it('renders the unchanged not-found state when a pinned revision 404s', async () => {
+    const view = await render(
+      <LabContent
+        {...propsFor({
+          revision: '2',
+          scenarios: null,
+          scenariosError: 'CHOONZ API returned 404.',
+        })}
+      />,
+    );
+
+    expect(view.getByText('CHOONZ API returned 404.')).toBeTruthy();
+    expect(view.queryByRole('button', { name: 'lab-select-seed0-classic' })).toBeNull();
+    // The pin stays visible and switchable, so the operator can leave the empty corpus.
+    expect(view.getByTestId('select-lab-revision-2').props.accessibilityState.selected).toBe(true);
+  });
+
+  it('never exposes the revision selector to an ineligible build', async () => {
+    for (const access of ['disabled', 'fixture-required', 'auth-required', 'loading'] as const) {
+      const view = await render(<LabContent {...propsFor({ access, scenarios: null })} />);
+      expect(view.queryByTestId('select-lab-revision-server')).toBeNull();
+      expect(view.queryByTestId('select-lab-revision-1')).toBeNull();
+    }
   });
 
   it('lists selectable scenarios and runs the unchanged golden', async () => {

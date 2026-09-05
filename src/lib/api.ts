@@ -59,6 +59,7 @@ import type {
   MatchCreateInput,
   MatchState,
   MatchTickInput,
+  MechanicsEngineRevision,
   MechanicsReplayOverrides,
   MechanicsReplayReceipt,
   MechanicsScenarioDetail,
@@ -79,6 +80,15 @@ import type {
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 type Decoder<T> = (value: unknown) => T;
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+
+/**
+ * Append an explicit `engine_revision` pin to a mechanics path. An absent pin
+ * appends nothing at all, so the request is byte-identical to the pre-selector
+ * one and the server's own default decides the corpus.
+ */
+function pinRevision(path: string, engineRevision?: MechanicsEngineRevision): string {
+  return engineRevision ? `${path}?engine_revision=${engineRevision}` : path;
+}
 
 const fixtureAccountConnections: ChoonzConnection[] = [
   {
@@ -122,11 +132,17 @@ export interface ChoonzApi {
   actMatch(matchId: number, input: MatchActInput): Promise<MatchState>;
   getMatchState(matchId: number): Promise<MatchState>;
   rematch(matchId: number): Promise<Match>;
-  getMechanicsScenarios(): Promise<MechanicsScenarioList>;
-  getMechanicsScenario(scenarioId: string): Promise<MechanicsScenarioDetail>;
+  getMechanicsScenarios(
+    engineRevision?: MechanicsEngineRevision,
+  ): Promise<MechanicsScenarioList>;
+  getMechanicsScenario(
+    scenarioId: string,
+    engineRevision?: MechanicsEngineRevision,
+  ): Promise<MechanicsScenarioDetail>;
   replayMechanics(
     scenarioId: string,
     overrides?: MechanicsReplayOverrides,
+    engineRevision?: MechanicsEngineRevision,
   ): Promise<MechanicsReplayReceipt>;
 }
 
@@ -465,15 +481,23 @@ export class ChoonzApiClient implements ChoonzApi {
     );
   }
 
-  getMechanicsScenarios(): Promise<MechanicsScenarioList> {
-    this.requireMechanicsEligibility();
-    return this.fromMechanicsMode('/mechanics/scenarios', decodeMechanicsScenarioList);
-  }
-
-  getMechanicsScenario(scenarioId: string): Promise<MechanicsScenarioDetail> {
+  getMechanicsScenarios(
+    engineRevision?: MechanicsEngineRevision,
+  ): Promise<MechanicsScenarioList> {
     this.requireMechanicsEligibility();
     return this.fromMechanicsMode(
-      `/mechanics/scenarios/${encodeURIComponent(scenarioId)}`,
+      pinRevision('/mechanics/scenarios', engineRevision),
+      decodeMechanicsScenarioList,
+    );
+  }
+
+  getMechanicsScenario(
+    scenarioId: string,
+    engineRevision?: MechanicsEngineRevision,
+  ): Promise<MechanicsScenarioDetail> {
+    this.requireMechanicsEligibility();
+    return this.fromMechanicsMode(
+      pinRevision(`/mechanics/scenarios/${encodeURIComponent(scenarioId)}`, engineRevision),
       decodeMechanicsScenarioDetail,
     );
   }
@@ -481,13 +505,21 @@ export class ChoonzApiClient implements ChoonzApi {
   replayMechanics(
     scenarioId: string,
     overrides?: MechanicsReplayOverrides,
+    engineRevision?: MechanicsEngineRevision,
   ): Promise<MechanicsReplayReceipt> {
     this.requireMechanicsEligibility();
-    const body: { scenario_id: string; overrides?: MechanicsReplayOverrides } = {
+    const body: {
+      scenario_id: string;
+      overrides?: MechanicsReplayOverrides;
+      engine_revision?: MechanicsEngineRevision;
+    } = {
       scenario_id: scenarioId,
     };
     if (overrides) {
       body.overrides = overrides;
+    }
+    if (engineRevision) {
+      body.engine_revision = engineRevision;
     }
     return this.fromMechanicsMode('/mechanics/replay', decodeMechanicsReplayReceipt, 'POST', body);
   }
