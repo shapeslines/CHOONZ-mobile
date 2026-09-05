@@ -250,6 +250,11 @@ export function LabContent({
             {`${receipt.verdict.toUpperCase()}${receipt.overridden ? ' · OVERRIDDEN' : ''}`}
           </Text>
           <BodyText>
+            schema {receipt.schema_version} · corpus {receipt.corpus_version} · engine{' '}
+            {receipt.engine_revision}
+          </BodyText>
+          <BodyText>corpus hash {receipt.corpus_hash}</BodyText>
+          <BodyText>
             scenario {receipt.scenario_id} · checkpoints{' '}
             {receipt.normalized_inputs.checkpoints.join(', ')}
           </BodyText>
@@ -298,7 +303,7 @@ export default function LabScreen() {
   const api = useChoonzApi();
   const eligible = config.mechanicsLabEnabled && config.mode === 'api' && !config.isProduction;
   const queryScope = protectedQueryScope(auth.status, auth.user?.id);
-  const queriesEnabled = eligible && queryScope !== null;
+  const queriesEnabled = eligible && auth.status === 'authenticated' && queryScope !== null;
   const scope = queryScope ?? 'inactive';
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
   const [revision, setRevision] = useState<LabRevisionSelection>('server');

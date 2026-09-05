@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   clearProtectedQueries,
   fightQueryKey,
+  mechanicsQueryKey,
   protectedQueryKey,
   protectedQueryScope,
 } from '../src/lib/protected-queries';
@@ -28,6 +29,15 @@ describe('protected query cache', () => {
       'match',
       '19',
     ]);
+  });
+
+  it('isolates lab caches by authenticated user and selected revision', () => {
+    expect(mechanicsQueryKey('user.user-7', 'scenarios')).toEqual([
+      'protected', 'user.user-7', 'mechanics', 'scenarios',
+    ]);
+    const key = mechanicsQueryKey('user.user-7', 'scenarios', '1');
+    expect(key).not.toEqual(mechanicsQueryKey('user.user-7', 'scenarios', '2'));
+    expect(key).not.toEqual(mechanicsQueryKey('user.user-8', 'scenarios', '1'));
   });
 
   it('removes protected queries even when cancellation fails', async () => {
