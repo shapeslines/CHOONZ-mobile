@@ -90,6 +90,20 @@ function propsFor(overrides: Partial<LabContentProps> = {}): LabContentProps {
 }
 
 describe('LabContent rendered states', () => {
+  it('renders receipt provenance independently of the selected corpus and requested revision', async () => {
+    const view = await render(
+      <LabContent {...propsFor({
+        revision: '1',
+        scenarios: { ...scenarios, engine_revision: '1', corpus_hash: 'list-hash' },
+        receipt: receipt({ engine_revision: '2', corpus_hash: 'receipt-hash' }),
+      })} />,
+    );
+    expect(view.getByText('schema 1.0 · corpus 1 · engine 1')).toBeTruthy();
+    expect(view.getByText('schema 1.0 · corpus 1 · engine 2')).toBeTruthy();
+    expect(view.getByText('corpus hash receipt-hash')).toBeTruthy();
+    expect(view.getByText('corpus hash list-hash')).toBeTruthy();
+  });
+
   it('fails closed in disabled builds with no scenario controls', async () => {
     const view = await render(<LabContent {...propsFor({ access: 'disabled' })} />);
 
@@ -250,10 +264,10 @@ describe('LabContent rendered states', () => {
     });
     const view = await render(<LabContent {...props} />);
 
-    expect(view.getByText('schema 1.0 · corpus 1 · engine 1')).toBeTruthy();
+    expect(view.getAllByText('schema 1.0 · corpus 1 · engine 1')).toHaveLength(2);
     expect(
-      view.getByText('corpus hash 66bb04718599049f78be740df497de4e118cee123bd47f6941513035ce0d23be'),
-    ).toBeTruthy();
+      view.getAllByText('corpus hash 66bb04718599049f78be740df497de4e118cee123bd47f6941513035ce0d23be'),
+    ).toHaveLength(2);
     expect(view.getByText(/step 0: actual .* expected /)).toBeTruthy();
     expect(view.getByText('gels sodium/blue · tape empty')).toBeTruthy();
   });

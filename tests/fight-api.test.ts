@@ -212,6 +212,24 @@ describe('fight API boundary', () => {
 // --------------------------------------------------------------------------- //
 
 describe('fight-v2 additive shapes', () => {
+  it.each(['p1', 'p2'] as const)('normalizes null additive fields on %s without relaxing malformed values', (side) => {
+    const base = statePayload();
+    const decoded = decodeMatchState({
+      ...base,
+      over: null,
+      winner: null,
+      [side]: { ...base[side], state: null, legal_actions: null, move_costs: null },
+    });
+    expect(decoded.over).toBeUndefined();
+    expect(decoded.winner).toBeNull();
+    expect(decoded[side].state).toBeUndefined();
+    expect(decoded[side].legal_actions).toBeUndefined();
+    expect(decoded[side].move_costs).toBeUndefined();
+    for (const fields of [{ state: 2 }, { legal_actions: [null] }, { move_costs: { heavy: null } }]) {
+      expect(() => decodeMatchState({ ...base, [side]: { ...base[side], ...fields } })).toThrow(ResponseDecodeError);
+    }
+  });
+
   it('defaults Match.engine to ah-scripted when an older server omits the key', () => {
     const older = matchPayload();
     expect('engine' in older).toBe(false);
