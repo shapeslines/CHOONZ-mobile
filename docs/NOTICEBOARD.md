@@ -23,7 +23,7 @@ related:
 | Role | Mobile client for the CHOONZ fighting-game platform (Expo Router + React Native + TypeScript) — combat UX, practice-match state transitions, profile/connections UI, offline fixtures mode, gated scenario-lab preview. |
 | Canonical checkout | CHOONZ/CHOONZ-mobile |
 | FLEET-MAP status | ALIVE (plain row, no note) |
-| Current front | `docs/next-session.md` — P1/P2/P3 slices plus skins/store-readiness design on main @ `eb34815`; next is owner sign-off on decisions M1-M6/D11-D18 (state dated 2026-08-18) |
+| Current front | `docs/next-session.md` — lab revision selector landed on main @ `f565fbf` (2026-09-04); claimable frontlog rows done or gated; owner merge of lockfile reify (rank 1) before hosted `expo:doctor` / CI green |
 | Key surfaces | `src/app` (Expo Router file routes) · `docs/skins.md` · `docs/store-readiness.md` · `docs/security/npm-audit-exception.md` |
 
 ## Route here when
@@ -41,7 +41,7 @@ related:
 
 ## Current state pointers
 
-- `docs/next-session.md` — main @ `eb34815` (2026-08-18): drafts #8-#25 reconciled via PR #29, Expo SDK 57 owner-authorized E2 landed; owner decisions M1-M6/D11-D18 gate all implementation slices. Lane worktrees use prefix `colony2/choonzm-` plus slug.
+- `docs/next-session.md` — main @ `f565fbf` (2026-09-04): rev-2 decoders, fight-v2 UI, series engine, and mechanics-lab revision selector shipped; lockfile/npm-audit owner rows gate hosted CI. Lane branches use `lane/choonzm-<id>/<yyyymmdd>` per `AGENTS.md`.
 
 ## Stop signs
 
@@ -56,4 +56,5 @@ related:
 
 ## Changelog
 
+- 2026-10-27 — refresh current-state pointers to main @ `f565fbf` (CI-fill pass; no lockfile change).
 - 2026-09-07 — board seeded (estate repo-board rollout, EstateBoard tracker).
