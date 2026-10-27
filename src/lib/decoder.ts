@@ -1,4 +1,4 @@
-import { ResponseDecodeError } from '@/lib/errors';
+import { ResponseDecodeError, type ApiErrorDetail } from '@/lib/errors';
 import type {
   CatalogMeta,
   ChoonzConnection,
@@ -12,6 +12,7 @@ import type {
   KitMove,
   Loadout,
   Match,
+  MatchEngine,
   MatchResult,
   MatchState,
   MatchStatus,
@@ -29,9 +30,13 @@ import type {
   MechanicsScenarioSummary,
   MechanicsVerdict,
   MySkins,
+  Series,
   Skin,
   SkinCatalog,
+  SkinGrant,
   SkinSummary,
+  SkinUnlockCondition,
+  SkinUnlockReceipt,
   SoundEvent,
   Stage,
   Toon,
@@ -160,6 +165,47 @@ function jsonValue(value: unknown, label: string): void {
 const matchStatuses = ['ready', 'active', 'paused', 'completed', 'cancelled'] as const;
 const matchResults = ['p1', 'p2', 'draw'] as const;
 const ceremonyStates = ['round_call', 'fight_call', 'in_fight'] as const;
+const matchEngines = ['ah-scripted', 'fight-v2'] as const;
+const seriesStatuses = ['active', 'completed', 'cancelled'] as const;
+const seriesWinners = ['p1', 'p2'] as const;
+
+/**
+ * Additive-field helper: an absent key stays absent, a present key is decoded
+ * strictly. `undefined` is the only value that skips the decoder, so a wrong
+ * type — including an unexpected `null` — still fails closed.
+ */
+function optional<T>(
+  value: unknown,
+  label: string,
+  decode: (item: unknown, itemLabel: string) => T,
+): T | undefined {
+  return value === undefined ? undefined : decode(value, label);
+}
+
+/**
+ * A revision-2 additive key that the M5 server sends as an explicit `null`
+ * under `ah-scripted` (`docs/mobile-integration.md` "Engine revision 2 (M5)":
+ * `over`, per-side `state` / `legal_actions` / `move_costs` are "`null`
+ * otherwise"). Both an absent key and a `null` read as "the engine said
+ * nothing"; any other present value still goes through the strict decoder, so
+ * a wrongly-typed key still throws.
+ */
+function absentOrNull<T>(
+  value: unknown,
+  label: string,
+  decode: (item: unknown, itemLabel: string) => T,
+): T | undefined {
+  return value === undefined || value === null ? undefined : decode(value, label);
+}
+
+function numberValueRecord(value: unknown, label: string): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(record(value, label)).map(([key, item]) => [
+      key,
+      number(item, `${label}.${key}`),
+    ]),
+  );
+}
 
 function literal<T extends string>(value: unknown, allowed: readonly T[], label: string): T {
   const next = string(value, label);
@@ -175,6 +221,10 @@ function matchStatus(value: unknown, label: string): MatchStatus {
 
 function nullableMatchResult(value: unknown, label: string): MatchResult | null {
   return value === null ? null : literal(value, matchResults, label);
+}
+
+function matchEngine(value: unknown, label: string): MatchEngine {
+  return literal(value, matchEngines, label);
 }
 
 export function decodeHealth(value: unknown): Health {
@@ -411,6 +461,40 @@ export function decodeMatch(value: unknown): Match {
     allowed_transitions: array(input.allowed_transitions, 'match.allowed_transitions').map(
       (item, index) => matchStatus(item, `match.allowed_transitions[${index}]`),
     ),
+    // Additive (CHOONZ #135 M4): an older server omits the key entirely, and
+    // that absence — never a guess from any other field — means `ah-scripted`.
+    engine: input.engine === undefined ? 'ah-scripted' : matchEngine(input.engine, 'match.engine'),
+  };
+}
+
+export function decodeSeries(value: unknown): Series {
+  const input = record(value, 'series');
+  return {
+    id: integer(input.id, 'series.id'),
+    best_of: integer(input.best_of, 'series.best_of'),
+    wins_needed: integer(input.wins_needed, 'series.wins_needed'),
+    p1_wins: integer(input.p1_wins, 'series.p1_wins'),
+    p2_wins: integer(input.p2_wins, 'series.p2_wins'),
+    status: literal(input.status, seriesStatuses, 'series.status'),
+    winner: input.winner === null ? null : literal(input.winner, seriesWinners, 'series.winner'),
+    p1_toon_id: integer(input.p1_toon_id, 'series.p1_toon_id'),
+    p2_toon_id: nullableInteger(input.p2_toon_id, 'series.p2_toon_id'),
+    p1_gel: string(input.p1_gel, 'series.p1_gel'),
+    p2_gel: string(input.p2_gel, 'series.p2_gel'),
+    p1_fighter_id: string(input.p1_fighter_id, 'series.p1_fighter_id'),
+    p2_fighter_id: string(input.p2_fighter_id, 'series.p2_fighter_id'),
+    stage_id: string(input.stage_id, 'series.stage_id'),
+    seed_base: integer(input.seed_base, 'series.seed_base'),
+    match_ids: array(input.match_ids, 'series.match_ids').map((item, index) =>
+      integer(item, `series.match_ids[${index}]`),
+    ),
+    open_match_id: nullableInteger(input.open_match_id, 'series.open_match_id'),
+    // Additive (CHOONZ #142 M5b), read exactly like `Match.engine`: a server
+    // from before M5b omits the key, and that absence — never a guess from a
+    // bout or any other field — means `ah-scripted`. A present-but-unknown
+    // value still fails closed.
+    engine:
+      input.engine === undefined ? 'ah-scripted' : matchEngine(input.engine, 'series.engine'),
   };
 }
 
@@ -424,6 +508,10 @@ function decodeFighterHud(value: unknown, label: string): FighterHud {
     frame: nullableInteger(input.frame, `${label}.frame`),
     x: nullableNumber(input.x, `${label}.x`),
     lift: nullableNumber(input.lift, `${label}.lift`),
+    // fight-v2 additive per-side keys. Unknown keys (including `boxes`) stay ignored.
+    state: absentOrNull(input.state, `${label}.state`, string),
+    legal_actions: absentOrNull(input.legal_actions, `${label}.legal_actions`, stringArray),
+    move_costs: absentOrNull(input.move_costs, `${label}.move_costs`, numberValueRecord),
   };
 }
 
@@ -451,6 +539,10 @@ export function decodeMatchState(value: unknown): MatchState {
     ann: nullableString(input.ann, 'match state.ann'),
     sound_hooks: stringArray(input.sound_hooks, 'match state.sound_hooks'),
     extra: jsonRecord(input.extra, 'match state.extra'),
+    // fight-v2 additive top-level keys; every other unknown key is still ignored.
+    winner: optional(input.winner, 'match state.winner', nullableMatchResult),
+    over: absentOrNull(input.over, 'match state.over', boolean),
+    engine: optional(input.engine, 'match state.engine', matchEngine),
   };
 }
 
@@ -464,7 +556,12 @@ const mechanicsActions = ['light', 'heavy', 'special', 'block'] as const;
 
 const MECHANICS_SCHEMA_VERSION = '1.0';
 const MECHANICS_CORPUS_VERSION = '1';
-const MECHANICS_ENGINE_REVISION = '1';
+/**
+ * Engine revisions this client can render (CHOONZ #135 M4/M5). The list is the
+ * whole gate: anything outside it is rejected, so a revision 3 corpus fails
+ * closed rather than being drawn with revision 2 assumptions.
+ */
+export const SUPPORTED_MECHANICS_ENGINE_REVISIONS = ['1', '2'] as const;
 
 function mechanicsVerdict(value: unknown, label: string): MechanicsVerdict {
   return literal(value, mechanicsVerdicts, label);
@@ -509,7 +606,7 @@ function decodeMechanicsIdentity(input: RecordValue, label: string): MechanicsCo
     );
   }
   const engineRevision = string(input.engine_revision, `${label}.engine_revision`);
-  if (engineRevision !== MECHANICS_ENGINE_REVISION) {
+  if (!(SUPPORTED_MECHANICS_ENGINE_REVISIONS as readonly string[]).includes(engineRevision)) {
     throw new ResponseDecodeError(
       `${label}.engine_revision ${engineRevision} is not supported by this client.`,
     );
@@ -674,14 +771,9 @@ export function decodeSkin(value: unknown): Skin {
 
 export function decodeMySkins(value: unknown): MySkins {
   const input = record(value, 'my skins');
-  const owned = array(input.owned, 'my skins.owned').map((item, index) => {
-    const grant = record(item, `my skins.owned[${index}]`);
-    return {
-      skin_id: string(grant.skin_id, `my skins.owned[${index}].skin_id`),
-      source: literal(grant.source, skinEntitlements, `my skins.owned[${index}].source`),
-      granted_at: string(grant.granted_at, `my skins.owned[${index}].granted_at`),
-    };
-  });
+  const owned = array(input.owned, 'my skins.owned').map((item, index) =>
+    decodeSkinGrant(item, `my skins.owned[${index}]`),
+  );
   const selectionInput = record(input.selection, 'my skins.selection');
   return {
     owned,
@@ -690,5 +782,64 @@ export function decodeMySkins(value: unknown): MySkins {
       scene_vibe: string(selectionInput.scene_vibe, 'my skins.selection.scene_vibe'),
       character: string(selectionInput.character, 'my skins.selection.character'),
     },
+  };
+}
+
+export function decodeSkinGrant(value: unknown, label = 'skin grant'): SkinGrant {
+  const grant = record(value, label);
+  return {
+    skin_id: string(grant.skin_id, `${label}.skin_id`),
+    source: literal(grant.source, skinEntitlements, `${label}.source`),
+    granted_at: string(grant.granted_at, `${label}.granted_at`),
+  };
+}
+
+export function decodeSkinUnlockCondition(
+  value: unknown,
+  label = 'unlock condition',
+): SkinUnlockCondition {
+  const input = record(value, label);
+  const required = integer(input.required, `${label}.required`);
+  const observed = integer(input.observed, `${label}.observed`);
+  if (required < 0 || observed < 0) {
+    throw new ResponseDecodeError(`${label} counts must be non-negative.`);
+  }
+  return { id: string(input.id, `${label}.id`), required, observed };
+}
+
+export function decodeSkinUnlockReceipt(value: unknown): SkinUnlockReceipt {
+  const input = record(value, 'skin unlock');
+  const grant = decodeSkinGrant(input, 'skin unlock');
+  return {
+    ...grant,
+    source: literal(input.source, ['earnable'] as const, 'skin unlock.source'),
+    condition: decodeSkinUnlockCondition(input.condition, 'skin unlock.condition'),
+  };
+}
+
+/**
+ * Lenient by design: error bodies are advisory. Anything that is not a string
+ * or an object with a string `code` yields `undefined` so the caller keeps the
+ * generic status-based failure.
+ */
+export function decodeApiErrorDetail(value: unknown): ApiErrorDetail | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+  const detail = (value as Record<string, unknown>).detail;
+  if (typeof detail === 'string') {
+    return { code: 'unknown', message: detail, extra: {} };
+  }
+  if (!detail || typeof detail !== 'object' || Array.isArray(detail)) {
+    return undefined;
+  }
+  const { code, message, ...extra } = detail as Record<string, unknown>;
+  if (typeof code !== 'string') {
+    return undefined;
+  }
+  return {
+    code,
+    message: typeof message === 'string' ? message : '',
+    extra,
   };
 }

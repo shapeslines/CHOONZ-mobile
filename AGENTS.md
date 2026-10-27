@@ -1,80 +1,67 @@
-﻿# CHOONZ-mobile - agent access (AGENTS.md)
+# AGENTS.md — CHOONZ-mobile
 
-Read first. Mobile client for CHOONZ.
+`CLAUDE.md` is a shim to this file. Read `README.md` first; the docs map is `docs/README.md`.
 
-## What this is
+## 1. System Affinity & Boundaries
+- **Role:** Mobile client for the CHOONZ fighting-game platform (Expo Router + React Native + TypeScript).
+- **Owns:** Client combat UX, practice match state transitions, profile/connections UI, offline fixtures mode, scenario lab preview, skins picker and (M-S3) earnable unlock UX.
+- **Delegates:** Backend match authority, simulation, entitlement verification, and the skins catalog to `shapeslines/CHOONZ`; shared design patterns to `Clubheavy-Mobile` and `Shapeslines-Mobile`.
+- **Is not:** the fighting engine (that is CHOONZ `app/engine/`, ADR-0003 there), the MoBA (`CHOONZ-MoBA` is a separate C++/Vulkan repo), or a renderer authority (Club Antics owns assets).
+- **Invariants:** Use only `expo-router` imports for app navigation; never add direct `@react-navigation/*` dependencies. Client is never the authority: it must not invent a match status, cursor, HUD, result, entitlement, or unlock. Honest-unavailable rule (§4). No package, lockfile, or CI change without a fresh dependency review while the npm-audit exception (review due 2026-09-10) stands.
+- **Branches:** `lane/choonzm-<id>/<yyyymmdd>` (the earlier `colony2/choonzm-<slug>` prefix is historical); PR-only merge; production build, providers, stores, and branch protection are owner-only.
 
-Expo Router + React Native client for the CHOONZ fighting-game backend
-(`shapeslines/CHOONZ`). The shipped review slice includes service status,
-authenticated identity, profile and connection management, the static combat
-catalog, the constrained P1 practice-match lifecycle, and a developer-only
-mechanics lab backed by the server's immutable scenario corpus.
+## 2. Deterministic Verification Matrix
+- `npm ci` — install dependencies
+- `npm test` — Vitest (`tests/**/*.test.ts`, node env)
+- `npm run test:screen` — Jest + jest-expo + RNTL rendered screens (`tests/*.test.tsx`)
+- `npm run typecheck` — TypeScript type checking
+- `npm run lint` — ESLint, zero warnings
+- `npm run expo:check` · `npm run expo:doctor` — Expo configuration / environment
+- `npm run build` — static web export (validation only)
+- Docs shape: `python <GromCodebase>/tools/docs-surface-lint.py --repo . --require-presence --allowlist <GromCodebase>/docs/fleet/docs-surface-allowlist.json`
+- Gate Rule: all of the above green before merge (hosted CI runs the same matrix on `main`).
 
-## Stack
+## 3. Inference Allocation Matrix
+- **Deep Inference Focus (Spend Tokens Here):**
+  - Combat frame simulation UX, touch hit-box responsiveness, and combat animation choreography.
+  - State machine error recovery (network drops during practice matches, token expiration during fight).
+  - Fixture vs API mode boundary transitions and fallback caching.
+  - Fail-closed decoding of every backend shape (including object-valued error `detail`).
+- **Reflex / Low Inference (Deterministic Output):**
+  - Standard React Native component layouts, styling wrappers, and screen route declarations.
+  - TanStack Query hooks boilerplate and standard TypeScript interfaces.
+  - Supabase client auth state wiring.
 
-TypeScript / Expo SDK 57 / React Native 0.86 / React 19 / Expo Router /
-Supabase Auth / TanStack Query. Node 22+ is required. Routes live in `src/app`.
-Use only `expo-router` imports for app navigation; do not add direct
-`@react-navigation/*` app imports or dependencies.
+## 4. Public Environment & Invariant Contracts
+- `EXPO_PUBLIC_CHOONZ_MODE=fixtures|api` (defaults to `fixtures`).
+- `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configure public auth.
+- Never add service-role keys, private database URLs, or secret credentials to client-accessible bundles.
+- Honest-unavailable rule: When disconnected or backend unreachable, show explicit connection status badges rather than blank combat frames or zeroed damage stats.
 
-## Repository rules
+## 5. Objects map (what the nouns are and where they live)
 
-- **Branch+PR only** off `origin/main`; no direct commits to main.
-- **Worktree discipline**: `git worktree add .worktrees/<claim-id> origin/main -b colony2/choonzm-<slug>`. Never commit into the shared main checkout.
-- **CI**: workflows under `.github/workflows/`. PR turns green before merge.
-- **Colony branch prefix**: `colony2/choonzm-<slug>`.
-- **Backend dependency**: changes to CHOONZ backend API contract require a paired PR here.
+| Object | Lives in | Contract |
+| --- | --- | --- |
+| `ChoonzApiClient` + `fromMode` / `fromFightMode` / `fromMechanicsMode`, `request()` | `src/lib/api.ts` | CHOONZ `docs/mobile-integration.md`; `README.md` "API boundary" |
+| `ChoonzClientError {kind, status, detail?}`, `ResponseDecodeError`, `errorMessage` | `src/lib/errors.ts` | `ClientFailureKind = configuration \| authentication \| network \| response` |
+| Runtime decoders (strict, fail-closed) and the consumed types | `src/lib/decoder.ts`, `src/lib/types.ts` | one decoder per backend shape; unknown shape → `ResponseDecodeError` |
+| Fight workflow FSM (`FightPhase`, `FightCommand`, `legalCommands`) — **not** combat | `src/lib/fight-machine.ts` | backend `Match.status` is the authority |
+| Skins registry (`isOwned`, `resolveThemeTokens`, `skinsByKind`), `SkinProvider` (catalog, loadout, `selectSkin`, M-S3 `unlockSkin`) | `src/lib/skins.ts`, `src/providers/skin-provider.tsx` | `docs/skins.md` |
+| Protected query keys / scope (`protectedQueryKey`, `mySkinsQueryKey`, `clearProtectedQueries`) | `src/lib/protected-queries.ts` | TanStack Query v5 |
+| Fixtures (catalog, loadout, profile, matches) + `FixtureMatchService` | `src/lib/fixtures.ts`, `src/lib/fixture-match-service.ts` | same decoded contract as API mode |
+| Screens (`fight`, `skins`, `profile`, `connections`, `catalog`, `lab`, `home`) | `src/app/*.tsx` | expo-router file routes |
+| Shell + themed primitives (`AppScreen`, `Panel`, `PanelTitle`, `BodyText`), tokens | `src/ui/app-screen.tsx`, `src/ui/tokens.ts` | `docs/skins.md` §2 token architecture |
+| Providers (auth, query client, skins) | `src/providers/*.tsx` | mounted by `app-providers.tsx` |
 
-## Owner-gated (never auto-apply)
+## 6. Session protocol
+- **START:** vault project note frontmatter (`Y:\GromBrain\20 Projects\tinytoonz\tinytoonz.md` — shared with the backend) → `docs/next-session.md` (trust its FIRST action only if `python <GromCodebase>/tools/next-session-audit.py --checkout .` says CURRENT; otherwise `git log`) → `docs/groundwork.md` Now / Up next → claim one row of `docs/WORK-FRONTLOG.md` and its plan under `docs/plans/`. Mailbox: inbox → status → posture → start (stream `choonz-mobile`).
+- **DURING:** one slice = one `docs/plans/<id>.md` (fence, gate, slice ledger) on `lane/choonzm-<id>/<yyyymmdd>`; specify target mode (`fixtures` vs `api`) and the verification command in every delegation.
+- **END:** `/wrap`. Replace (never append) `docs/next-session.md` in the ADR-0025 shape, ≤40 lines, no shas or 8-digit dates in its top 20 lines; run the docs lint; raise propagation markers in `docs/custodian-queue.md`; patch the vault note's projection fields; post the mailbox wrap with commit + PR + next pickup.
 
-- Production EAS Build / Store submission
-- Auth provider swap (Supabase project config)
-- Branch-protection rule changes
-- Force-push to any branch
-
-## Related lanes
-
-- Catalogue ingress material: `C:\Users\Carson\Desktop\grokprod2\ingress\02-choonz-fighting-game\`
-- Backend repo: `shapeslines/CHOONZ`
-- Architecture reference: CHOONZ/ARCHITECTURE.md (cross-repo)
-- World-instantiation plan: `C:\Users\Carson\Desktop\PROCESSING\2026-08-09-world-instantiation-plan.md`
-
-## Public environment contract
-
-- `EXPO_PUBLIC_CHOONZ_MODE=fixtures|api`; development defaults to `fixtures`.
-  A production build with a missing or invalid mode, or API mode without a valid
-  API base URL, fails closed at the client boundary.
-- `EXPO_PUBLIC_CHOONZ_API_BASE_URL` is required only for `api` mode and must use
-  HTTPS in production. Development HTTP is limited to `localhost`, `127.0.0.1`,
-  or `[::1]`.
-- `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configure
-  Supabase Auth and follow the same transport rule. The primary key must begin
-  `sb_publishable_`; `EXPO_PUBLIC_SUPABASE_ANON_KEY` is only a decodable legacy
-  JWT with role `anon`, and never overrides an invalid primary key.
-- `EXPO_PUBLIC_*` values are visible in a shipped app. Never add a service-role,
-  secret key, database URL/password, or any private value to this project.
-
-## Verification
-
-- Install: `npm ci`
-- Tests: `npm test` (Vitest)
-- Type check: `npm run typecheck`
-- Lint: `npm run lint`
-- Expo config: `npm run expo:check`
-- Expo Doctor: `npm run expo:doctor`
-- Web build: `npm run build`
-
-## Conventions
-
-Follow `shapeslines/Clubheavy-Mobile` and `shapeslines/Shapeslines-Mobile` for
-directory layout, hook patterns, and adapter shape.
-
-This repository owns the mobile client for the bounded P1 match mutations and
-the P2 profile/connection calls. It does not own backend match authority,
-OAuth/provider deep-link flows, EAS linking, or store submission in the current
-slice.
-
-Web export is validation-only. Do not deploy the web target without a CSP and
-third-party-script review: browser session persistence uses localStorage. Keep
-untrusted binary assets out of CI while upstream Metro/image-size and Expo
-config-plugin/uuid build-chain advisories remain; do not force an Expo SDK downgrade.
+## Related Lanes & Canonical References
+- Docs map: `docs/README.md` · Resume pin: `docs/next-session.md` · Build status: `docs/groundwork.md`
+- Tickets: `docs/WORK-FRONTLOG.md` · Sequence: `docs/ROADMAP.md` · Theory→repo bridge: `docs/plans/README.md`
+- ADRs: `docs/decisions/README.md` · Skins: `docs/skins.md` · Store: `docs/store-readiness.md`
+- Backend repo: `shapeslines/CHOONZ` (contract: `docs/mobile-integration.md`; engine: `docs/engine-seam.md`)
+- Architecture reference: `CHOONZ/ARCHITECTURE.md`
+- Fleet standard: `GromCodebase/docs/fleet/per-repo-onboarding-envelope-standard-2026-08-17.md`; discovery `docs/fleet/FLEET-INDEX.md` — never fork GAP-REGISTER or FLEET-INDEX here.

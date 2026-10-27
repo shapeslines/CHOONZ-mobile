@@ -141,6 +141,13 @@ export type MatchStatus = 'ready' | 'active' | 'paused' | 'completed' | 'cancell
 export type MatchResult = 'p1' | 'p2' | 'draw';
 export type FightAction = 'light' | 'heavy' | 'special' | 'block';
 
+/**
+ * Backend engine that owns a match (CHOONZ ADR-0003 engine revision 2, M4/M5).
+ * Older servers omit the field; the client reads that absence as `ah-scripted`.
+ * The client never infers the engine from any other field.
+ */
+export type MatchEngine = 'ah-scripted' | 'fight-v2';
+
 export interface MatchTelemetry {
   result: MatchResult;
   result_step: number;
@@ -175,6 +182,8 @@ export interface Match {
   share_token: string | null;
   telemetry: MatchTelemetry | null;
   allowed_transitions: MatchStatus[];
+  /** Additive (CHOONZ #135 M4). Absent on older servers → decoded as `ah-scripted`. */
+  engine?: MatchEngine;
 }
 
 export interface FighterHud {
@@ -185,6 +194,12 @@ export interface FighterHud {
   frame: number | null;
   x: number | null;
   lift: number | null;
+  /** fight-v2 additive: the side's engine state name. Absent under `ah-scripted`. */
+  state?: string;
+  /** fight-v2 additive: actions the engine will accept for this side right now. */
+  legal_actions?: string[];
+  /** fight-v2 additive: meter cost per action id. */
+  move_costs?: Record<string, number>;
 }
 
 export interface MatchState {
@@ -209,6 +224,12 @@ export interface MatchState {
   ann: string | null;
   sound_hooks: string[];
   extra: Record<string, unknown>;
+  /** fight-v2 additive: the decided winner once the match is over. */
+  winner?: MatchResult | null;
+  /** fight-v2 additive: whether the engine considers the match finished. */
+  over?: boolean;
+  /** fight-v2 additive: which engine produced this read. */
+  engine?: MatchEngine;
 }
 
 export interface MatchCreateInput {
@@ -225,6 +246,58 @@ export interface MatchCreateInput {
   p2_fighter_id?: string;
   stage_id?: string;
   seed?: number;
+  /** Optional engine request (CHOONZ #135 M4). Omitted → the server default. */
+  engine?: MatchEngine;
+}
+
+export type SeriesStatus = 'active' | 'completed' | 'cancelled';
+export type SeriesWinner = 'p1' | 'p2';
+
+/**
+ * A best-of-N series (CHOONZ `SeriesRead`). The engine is picked once, stamped
+ * on the series' first bout, and inherited by every later bout — one series can
+ * never mix simulations and there is no per-bout override (CHOONZ #142 M5b).
+ */
+export interface Series {
+  id: number;
+  best_of: number;
+  wins_needed: number;
+  p1_wins: number;
+  p2_wins: number;
+  status: SeriesStatus;
+  winner: SeriesWinner | null;
+  p1_toon_id: number;
+  p2_toon_id: number | null;
+  p1_gel: string;
+  p2_gel: string;
+  p1_fighter_id: string;
+  p2_fighter_id: string;
+  stage_id: string;
+  seed_base: number;
+  match_ids: number[];
+  open_match_id: number | null;
+  /**
+   * Additive (CHOONZ #142 M5b). Derived server-side from the newest bout; a
+   * series created before M5b omits the key, and that absence — never a guess
+   * from any other field — is read as `ah-scripted`.
+   */
+  engine?: MatchEngine;
+}
+
+export interface SeriesCreateInput {
+  best_of?: 3 | 5;
+  p1_toon_id: number;
+  p2_toon_id?: number | null;
+  p1_gel?: string;
+  p2_gel?: string;
+  p1_fighter_id?: string;
+  p2_fighter_id?: string;
+  stage_id?: string;
+  seed_base?: number;
+  enforce_one_gel?: boolean;
+  allow_gel_split?: boolean;
+  /** Optional engine request (CHOONZ #142 M5b). Omitted → the server default. */
+  engine?: MatchEngine;
 }
 
 export interface MatchActInput {
@@ -242,6 +315,14 @@ export interface MatchCompleteInput {
 }
 
 export type MechanicsVerdict = 'pass' | 'fail' | 'not_applicable';
+
+/**
+ * A revision the lab may pin explicitly on a request (CHOONZ M5). An absent pin
+ * means "whatever the server serves", which is why this union has no `server`
+ * member. The decoded `MechanicsCorpusIdentity.engine_revision` stays the only
+ * authority for what a response actually is.
+ */
+export type MechanicsEngineRevision = '1' | '2';
 
 export interface MechanicsCorpusIdentity {
   schema_version: string;
@@ -386,3 +467,19 @@ export interface SkinSelectionUpdateInput {
   kind: SkinKind;
   skin_id: string;
 }
+
+export interface SkinUnlockCondition {
+  id: string;
+  required: number;
+  observed: number;
+}
+
+export interface SkinUnlockReceipt extends SkinGrant {
+  source: 'earnable';
+  condition: SkinUnlockCondition;
+}
+
+export type SkinUnlockOutcome =
+  | { status: 'granted'; receipt: SkinUnlockReceipt }
+  | { status: 'condition_not_met'; condition: SkinUnlockCondition }
+  | { status: 'revoked'; message: string };

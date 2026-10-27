@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { isOwned, skinsByKind } from '@/lib/skins';
-import type { SkinKind, SkinSummary } from '@/lib/types';
+import type { SkinKind, SkinSummary, SkinUnlockOutcome } from '@/lib/types';
 import { useSkins } from '@/providers/skin-provider';
 import { AppScreen, BodyText, Panel, PanelTitle } from '@/ui/app-screen';
 import { tokens } from '@/ui/tokens';
@@ -15,7 +15,17 @@ const KINDS: { kind: SkinKind; label: string }[] = [
 
 export function SkinsContent(props?: Partial<ReturnType<typeof useSkins>>) {
   const context = useSkins();
-  const { catalog, mySkins, selectSkin, selecting, selectError } = { ...context, ...props };
+  const {
+    catalog,
+    mySkins,
+    selectSkin,
+    selecting,
+    selectError,
+    unlockSkin,
+    unlocking,
+    unlockReports,
+    unlockError,
+  } = { ...context, ...props };
   const [activeKind, setActiveKind] = useState<SkinKind>('ui_theme');
 
   if (!catalog) {
@@ -55,6 +65,7 @@ export function SkinsContent(props?: Partial<ReturnType<typeof useSkins>>) {
           ))}
         </View>
         {selectError ? <Text style={styles.error}>{selectError}</Text> : null}
+        {unlockError ? <Text style={styles.error}>{unlockError}</Text> : null}
       </Panel>
 
       <Panel>
@@ -67,11 +78,33 @@ export function SkinsContent(props?: Partial<ReturnType<typeof useSkins>>) {
             owned={isOwned(skin, mySkins)}
             selecting={selecting}
             onSelect={() => selectSkin({ kind: activeKind, skin_id: skin.id })}
+            unlocking={unlocking === skin.id}
+            report={unlockReports?.[skin.id]}
+            onUnlock={() => unlockSkin(skin.id)}
           />
         ))}
       </Panel>
     </>
   );
+}
+
+const CONDITION_LABELS: Record<string, string> = {
+  complete_n_matches: 'MATCHES',
+};
+
+function conditionCopy(report: SkinUnlockOutcome | undefined): string {
+  if (!report) {
+    return '';
+  }
+  if (report.status === 'revoked') {
+    return ' · REVOKED';
+  }
+  if (report.status === 'condition_not_met') {
+    const { condition } = report;
+    const label = CONDITION_LABELS[condition.id] ?? condition.id.toUpperCase();
+    return ` · ${condition.observed}/${condition.required} ${label}`;
+  }
+  return '';
 }
 
 function SkinRow({
@@ -80,13 +113,21 @@ function SkinRow({
   owned,
   selecting,
   onSelect,
+  unlocking,
+  report,
+  onUnlock,
 }: {
   skin: SkinSummary;
   selected: boolean;
   owned: boolean;
   selecting: boolean;
   onSelect: () => void;
+  unlocking: boolean;
+  report: SkinUnlockOutcome | undefined;
+  onUnlock: () => void;
 }) {
+  const earnable = skin.entitlement === 'earnable';
+  const revoked = report?.status === 'revoked';
   return (
     <View style={styles.row}>
       <View style={styles.rowCopy}>
@@ -95,6 +136,7 @@ function SkinRow({
           {skin.status === 'planned' ? 'COMING SOON · ' : ''}
           {skin.entitlement.toUpperCase()}
           {selected ? ' · ACTIVE' : ''}
+          {owned ? '' : conditionCopy(report)}
         </Text>
       </View>
       {owned ? (
@@ -107,9 +149,21 @@ function SkinRow({
         >
           <Text style={styles.selectButtonText}>{selected ? 'ACTIVE' : 'SELECT'}</Text>
         </Pressable>
+      ) : earnable && !revoked ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`unlock-skin-${skin.id}`}
+          disabled={unlocking}
+          onPress={onUnlock}
+          style={[styles.selectButton, unlocking ? styles.selectDisabled : null]}
+        >
+          <Text style={styles.selectButtonText}>
+            {unlocking ? 'UNLOCKING…' : report ? 'CHECK PROGRESS' : 'UNLOCK'}
+          </Text>
+        </Pressable>
       ) : (
         <Text style={styles.locked}>
-          {skin.entitlement === 'iap' ? 'STORE' : 'UNLOCK'}
+          {skin.entitlement === 'iap' ? 'STORE' : revoked ? 'REVOKED' : 'LOCKED'}
         </Text>
       )}
     </View>

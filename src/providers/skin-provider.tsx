@@ -1,9 +1,10 @@
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 
+import { errorMessage } from '@/lib/errors';
 import { mySkinsQueryKey, protectedQueryScope } from '@/lib/protected-queries';
 import { resolveLoadoutTheme, type ResolvedThemeTokens } from '@/lib/skins';
-import type { MySkins, SkinCatalog, SkinSelectionUpdateInput } from '@/lib/types';
+import type { MySkins, SkinCatalog, SkinSelectionUpdateInput, SkinUnlockOutcome } from '@/lib/types';
 import { tokens } from '@/ui/tokens';
 import { useChoonzApi } from '@/providers/api-provider';
 import { useAuth } from '@/providers/auth-provider';
@@ -15,6 +16,13 @@ interface SkinContextValue {
   selectSkin: (input: SkinSelectionUpdateInput) => void;
   selecting: boolean;
   selectError: string | null;
+  /** M-S3: ask the backend to unlock an earnable skin; the server is the only verifier. */
+  unlockSkin: (skinId: string) => void;
+  /** Skin id currently being unlocked, or null. */
+  unlocking: string | null;
+  /** Last server report per skin id (granted / condition_not_met / revoked). */
+  unlockReports: Record<string, SkinUnlockOutcome>;
+  unlockError: string | null;
 }
 
 const SkinContext = createContext<SkinContextValue>({
@@ -24,12 +32,18 @@ const SkinContext = createContext<SkinContextValue>({
   selectSkin: () => undefined,
   selecting: false,
   selectError: null,
+  unlockSkin: () => undefined,
+  unlocking: null,
+  unlockReports: {},
+  unlockError: null,
 });
 
 /**
  * M-S2: loads the skin catalog + the user's loadout, exposes the resolved
  * render theme, and applies selection mutations optimistically with
- * rollback. The backend stays the authority; the theme is render-only.
+ * rollback. M-S3: earnable unlocks are never optimistic — the report comes
+ * back from the server and the loadout is re-fetched. The backend stays the
+ * authority; the theme is render-only.
  */
 export function SkinProvider({ children }: { children: React.ReactNode }) {
   const api = useChoonzApi();
@@ -37,6 +51,7 @@ export function SkinProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const scope = protectedQueryScope(auth.status, auth.user?.id);
   const enabled = scope !== null;
+  const [unlockReports, setUnlockReports] = useState<Record<string, SkinUnlockOutcome>>({});
 
   const catalogQuery = useQuery({
     queryKey: ['skins', 'catalog'],
@@ -75,6 +90,16 @@ export function SkinProvider({ children }: { children: React.ReactNode }) {
     },
   });
 
+  const unlock = useMutation({
+    mutationFn: (skinId: string) => api.unlockSkin(skinId),
+    onSuccess: (outcome, skinId) => {
+      setUnlockReports((previous) => ({ ...previous, [skinId]: outcome }));
+      if (outcome.status === 'granted') {
+        void queryClient.invalidateQueries({ queryKey: mySkinsKey });
+      }
+    },
+  });
+
   const theme = useMemo(
     () => resolveLoadoutTheme(catalogQuery.data ?? { schema_version: '', catalog_hash: '', count: 0, skins: [] }, mySkinsQuery.data?.selection),
     [catalogQuery.data, mySkinsQuery.data],
@@ -88,8 +113,12 @@ export function SkinProvider({ children }: { children: React.ReactNode }) {
       selectSkin: (input: SkinSelectionUpdateInput) => select.mutate(input),
       selecting: select.isPending,
       selectError: select.isError ? 'Could not update the skin selection.' : null,
+      unlockSkin: (skinId: string) => unlock.mutate(skinId),
+      unlocking: unlock.isPending ? (unlock.variables ?? null) : null,
+      unlockReports,
+      unlockError: unlock.isError ? `Could not unlock the skin: ${errorMessage(unlock.error)}` : null,
     }),
-    [catalogQuery.data, mySkinsQuery.data, theme, select],
+    [catalogQuery.data, mySkinsQuery.data, theme, select, unlock, unlockReports],
   );
 
   return <SkinContext.Provider value={value}>{children}</SkinContext.Provider>;

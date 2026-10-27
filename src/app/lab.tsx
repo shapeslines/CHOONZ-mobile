@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { errorMessage } from '@/lib/errors';
 import { mechanicsQueryKey, protectedQueryScope } from '@/lib/protected-queries';
 import type {
+  MechanicsEngineRevision,
   MechanicsReplayOverrides,
   MechanicsReplayReceipt,
   MechanicsScenarioList,
@@ -22,8 +23,21 @@ export type LabAccess =
   | 'loading'
   | 'eligible';
 
+/**
+ * What the operator asked for, which is not what the server answered.
+ * `server` sends no `engine_revision` at all and follows whatever the backend
+ * defaults to (revision `2` since CHOONZ M5); `1` and `2` pin the request. The
+ * header still prints the revision the server *declared*, so a pin that the
+ * server does not honour is visible rather than assumed.
+ */
+export type LabRevisionSelection = 'server' | MechanicsEngineRevision;
+
+export const LAB_REVISION_CHOICES: readonly LabRevisionSelection[] = ['server', '1', '2'];
+
 export interface LabContentProps {
   access: LabAccess;
+  revision: LabRevisionSelection;
+  onSelectRevision: (revision: LabRevisionSelection) => void;
   scenarios: MechanicsScenarioList | null;
   scenariosPending: boolean;
   scenariosError: string | null;
@@ -38,6 +52,8 @@ export interface LabContentProps {
 
 export function LabContent({
   access,
+  revision,
+  onSelectRevision,
   scenarios,
   scenariosPending,
   scenariosError,
@@ -119,6 +135,35 @@ export function LabContent({
           </BodyText>
         ) : null}
         {scenarios ? <BodyText>corpus hash {scenarios.corpus_hash}</BodyText> : null}
+      </Panel>
+
+      <Panel>
+        <PanelTitle>LAB / ENGINE REVISION</PanelTitle>
+        <View style={styles.revisionRow}>
+          {LAB_REVISION_CHOICES.map((choice) => {
+            const selected = choice === revision;
+            return (
+              <Pressable
+                key={choice}
+                accessibilityRole="button"
+                accessibilityLabel={`select-lab-revision-${choice}`}
+                accessibilityState={{ selected }}
+                onPress={() => onSelectRevision(choice)}
+                style={[styles.revisionChoice, selected ? styles.revisionChoiceSelected : null]}
+                testID={`select-lab-revision-${choice}`}
+              >
+                <Text style={styles.actionText}>
+                  {choice === 'server' ? 'SERVER' : choice}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <BodyText>
+          SERVER sends no revision and follows the backend default. Pinning 1 or 2 requests
+          that corpus on every list, detail, and replay call; the header above still states
+          the revision the server declared.
+        </BodyText>
       </Panel>
 
       {scenariosPending ? <BodyText>Loading scenarios…</BodyText> : null}
@@ -256,16 +301,21 @@ export default function LabScreen() {
   const queriesEnabled = eligible && queryScope !== null;
   const scope = queryScope ?? 'inactive';
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
+  const [revision, setRevision] = useState<LabRevisionSelection>('server');
+  // `undefined` is the whole "follow the server" contract: no query param, no body field.
+  const pin: MechanicsEngineRevision | undefined = revision === 'server' ? undefined : revision;
 
   const scenarios = useQuery({
-    queryKey: mechanicsQueryKey(scope, 'scenarios'),
-    queryFn: () => api.getMechanicsScenarios(),
+    // The pin is part of the cache identity: switching it refetches rather than
+    // re-rendering another corpus' scenarios.
+    queryKey: mechanicsQueryKey(scope, 'scenarios', revision),
+    queryFn: () => api.getMechanicsScenarios(pin),
     enabled: queriesEnabled,
   });
 
   const replayMutation = useMutation({
     mutationFn: (overrides?: MechanicsReplayOverrides) =>
-      api.replayMechanics(selectedScenarioId ?? '', overrides),
+      api.replayMechanics(selectedScenarioId ?? '', overrides, pin),
   });
 
   const access: LabAccess = eligible
@@ -281,6 +331,14 @@ export default function LabScreen() {
   return (
     <LabContent
       access={access}
+      revision={revision}
+      onSelectRevision={(next) => {
+        setRevision(next);
+        // A receipt belongs to the corpus it was replayed against; drop it rather
+        // than let it read as this corpus' verdict.
+        replayMutation.reset();
+        setSelectedScenarioId(null);
+      }}
       scenarios={scenarios.data ?? null}
       scenariosPending={scenarios.isPending}
       scenariosError={scenarios.isError ? errorMessage(scenarios.error) : null}
@@ -339,6 +397,22 @@ const styles = StyleSheet.create({
   },
   overrideRow: {
     gap: 8,
+  },
+  revisionRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  revisionChoice: {
+    backgroundColor: tokens.panelStrong,
+    borderColor: tokens.border,
+    borderRadius: tokens.radius,
+    borderWidth: tokens.borderWidth,
+    flexGrow: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  revisionChoiceSelected: {
+    borderColor: tokens.accent,
   },
   overrideInput: {
     backgroundColor: tokens.black,

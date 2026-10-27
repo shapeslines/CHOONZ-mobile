@@ -206,13 +206,14 @@ export const fixtureMatchSeed = 677;
 export const fixtureSkinCatalog: SkinCatalog = {
   schema_version: '1.0',
   catalog_hash: 'fixture-skin-catalog-v1',
-  count: 12,
+  count: 13,
   skins: [
     { id: 'gel:acid', kind: 'ui_theme', display_name: 'Acid', description: 'The acid gel palette as an app and HUD theme.', entitlement: 'free', base_gel: 'acid', default: false, status: 'built' },
     { id: 'gel:blue', kind: 'ui_theme', display_name: 'Blue', description: 'The blue gel palette as an app and HUD theme.', entitlement: 'free', base_gel: 'blue', default: false, status: 'built' },
     { id: 'gel:red', kind: 'ui_theme', display_name: 'Red', description: 'The red gel palette as an app and HUD theme.', entitlement: 'free', base_gel: 'red', default: false, status: 'built' },
     { id: 'gel:sodium', kind: 'ui_theme', display_name: 'Sodium', description: 'The sodium gel palette as an app and HUD theme.', entitlement: 'free', base_gel: 'sodium', default: true, status: 'built' },
     { id: 'gel:uv', kind: 'ui_theme', display_name: 'Uv', description: 'The uv gel palette as an app and HUD theme.', entitlement: 'free', base_gel: 'uv', default: false, status: 'built' },
+    { id: 'gel:sodium-ember', kind: 'ui_theme', display_name: 'Sodium Ember', description: 'A hotter sodium theme, unlocked by completing five matches.', entitlement: 'earnable', base_gel: 'sodium', default: false, status: 'built' },
     { id: 'vibe:rooftop', kind: 'scene_vibe', display_name: 'Rooftop', description: 'The stock rooftop stage presentation.', entitlement: 'free', base_gel: 'sodium', default: true, status: 'built' },
     { id: 'vibe:warehouse-rain', kind: 'scene_vibe', display_name: 'Warehouse Rain', description: 'A warehouse stage variant (assets pending).', entitlement: 'free', base_gel: 'blue', default: false, status: 'planned' },
     { id: 'char:axel-stock', kind: 'character', display_name: 'AXEL', description: 'Stock AXEL look (no asset pack required).', entitlement: 'free', base_gel: 'sodium', default: true, status: 'built' },
@@ -231,3 +232,7 @@ export const fixtureMySkins: MySkins = {
     character: 'char:axel-stock',
   },
 };
+
+/** P-S3 fixture rule: the earnable fixture skin unlocks after this many completed matches. */
+export const fixtureUnlockRequired = 5;
+export const fixtureEarnableSkinId = 'gel:sodium-ember';

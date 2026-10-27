@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { errorMessage } from '@/lib/errors';
+import { ChoonzClientError, errorMessage } from '@/lib/errors';
 import { accountQueryKey, protectedQueryScope } from '@/lib/protected-queries';
 import type { ChoonzUser } from '@/lib/types';
 import { useChoonzApi } from '@/providers/api-provider';
@@ -21,6 +21,155 @@ export function AuthRecoveryGuidance() {
       </BodyText>
     </Panel>
   );
+}
+
+/** The exact phrase the player must type before deletion is enabled (C1). */
+export const DELETE_CONFIRM_PHRASE = 'DELETE MY ACCOUNT';
+
+/** 403 — the token is not a first-party session, or lacks the deletion scope. */
+export const DELETE_DENIED_COPY =
+  'This session is not allowed to delete the account. Account deletion is a first-party action: sign in to the CHOONZ app directly and try again.';
+
+/** 422 fallback — used only when the server sends no machine-readable detail. */
+export const DELETE_INVALID_COPY =
+  'The server rejected the deletion request. Re-type the confirmation exactly and try again.';
+
+/** Network / 5xx — the account was not deleted and the request can be repeated. */
+export const DELETE_UNAVAILABLE_COPY =
+  'Could not reach the CHOONZ API to delete the account. Nothing was deleted; you can retry.';
+
+export type DeleteFailureHandling =
+  | { outcome: 'already-deleted' }
+  | { outcome: 'failed'; message: string; retryable: boolean };
+
+/**
+ * Per-status contract for `DELETE /me` (`docs/store-readiness.md` §3).
+ * 401 is absent by design: the API client routes it through `onUnauthorized`
+ * and the auth provider finalizes the session before this ever sees it.
+ */
+export function classifyDeleteFailure(reason: unknown): DeleteFailureHandling {
+  if (reason instanceof ChoonzClientError) {
+    if (reason.status === 404) {
+      // Already gone server-side; the local session is the only thing left.
+      return { outcome: 'already-deleted' };
+    }
+    if (reason.status === 422) {
+      return {
+        outcome: 'failed',
+        message: reason.detail?.message ?? DELETE_INVALID_COPY,
+        retryable: false,
+      };
+    }
+    if (reason.status === 403) {
+      return { outcome: 'failed', message: DELETE_DENIED_COPY, retryable: false };
+    }
+    if (reason.kind === 'network' || (reason.status !== undefined && reason.status >= 500)) {
+      return { outcome: 'failed', message: DELETE_UNAVAILABLE_COPY, retryable: true };
+    }
+  }
+  return { outcome: 'failed', message: errorMessage(reason), retryable: false };
+}
+
+export interface AccountDeletionDeps {
+  deleteAccount: () => Promise<void>;
+  signOut: () => Promise<void>;
+  clearQueries: () => void;
+}
+
+export interface AccountDeletion {
+  confirming: boolean;
+  typedConfirm: string;
+  deleting: boolean;
+  error: string | null;
+  retryable: boolean;
+  setTypedConfirm: (value: string) => void;
+  request: () => void;
+  cancel: () => void;
+  confirm: () => void;
+  retry: () => void;
+}
+
+/**
+ * Owns the typed-confirm deletion state machine so the per-status contract is
+ * testable without the provider tree. A retryable failure keeps the confirm
+ * panel (and the typed phrase) so the same tap can re-invoke the delete.
+ */
+export function useAccountDeletion({
+  deleteAccount,
+  signOut,
+  clearQueries,
+}: AccountDeletionDeps): AccountDeletion {
+  const [confirming, setConfirming] = useState(false);
+  const [typedConfirm, setTypedConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryable, setRetryable] = useState(false);
+
+  const finalize = useCallback(async () => {
+    try {
+      await signOut();
+    } catch {
+      // The server account is gone; local sign-out failures never block cleanup.
+    }
+    clearQueries();
+    setConfirming(false);
+    setTypedConfirm('');
+    setRetryable(false);
+    setError(null);
+  }, [clearQueries, signOut]);
+
+  const run = useCallback(async () => {
+    setError(null);
+    setRetryable(false);
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      await finalize();
+    } catch (reason) {
+      const handling = classifyDeleteFailure(reason);
+      if (handling.outcome === 'already-deleted') {
+        await finalize();
+      } else {
+        setError(handling.message);
+        setRetryable(handling.retryable);
+        if (!handling.retryable) {
+          setConfirming(false);
+          setTypedConfirm('');
+        }
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleteAccount, finalize]);
+
+  const request = useCallback(() => {
+    setError(null);
+    setRetryable(false);
+    setConfirming(true);
+  }, []);
+
+  const cancel = useCallback(() => {
+    setConfirming(false);
+    setTypedConfirm('');
+    setRetryable(false);
+  }, []);
+
+  const invoke = useCallback(() => {
+    void run();
+  }, [run]);
+
+  return {
+    confirming,
+    typedConfirm,
+    deleting,
+    error,
+    retryable,
+    setTypedConfirm,
+    request,
+    cancel,
+    confirm: invoke,
+    retry: invoke,
+  };
 }
 
 export interface ProfileContentProps {
@@ -48,9 +197,11 @@ export interface ProfileContentProps {
   onDeleteTypedConfirmChange: (value: string) => void;
   deleting: boolean;
   deleteError: string | null;
+  deleteRetryable: boolean;
   onRequestDelete: () => void;
   onCancelDelete: () => void;
   onConfirmDelete: () => void;
+  onRetryDelete: () => void;
 }
 
 export function ProfileContent({
@@ -78,9 +229,11 @@ export function ProfileContent({
   onDeleteTypedConfirmChange,
   deleting,
   deleteError,
+  deleteRetryable,
   onRequestDelete,
   onCancelDelete,
   onConfirmDelete,
+  onRetryDelete,
 }: ProfileContentProps) {
   const tooLong = displayName.trim().length > 120;
   return (
@@ -185,13 +338,13 @@ export function ProfileContent({
           {deleteConfirming ? (
             <>
               <Text style={styles.warning}>
-                Type DELETE MY ACCOUNT to confirm permanent deletion.
+                Type {DELETE_CONFIRM_PHRASE} to confirm permanent deletion.
               </Text>
               <TextInput
                 accessibilityLabel="delete-account-confirm"
                 autoCapitalize="characters"
                 onChangeText={onDeleteTypedConfirmChange}
-                placeholder="DELETE MY ACCOUNT"
+                placeholder={DELETE_CONFIRM_PHRASE}
                 placeholderTextColor={tokens.muted}
                 style={styles.input}
                 value={deleteTypedConfirm}
@@ -209,11 +362,11 @@ export function ProfileContent({
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="confirm-delete-account"
-                  disabled={deleting || deleteTypedConfirm !== 'DELETE MY ACCOUNT'}
+                  disabled={deleting || deleteTypedConfirm !== DELETE_CONFIRM_PHRASE}
                   onPress={onConfirmDelete}
                   style={[
                     styles.dangerButton,
-                    deleting || deleteTypedConfirm !== 'DELETE MY ACCOUNT'
+                    deleting || deleteTypedConfirm !== DELETE_CONFIRM_PHRASE
                       ? styles.buttonDisabled
                       : null,
                   ]}
@@ -223,6 +376,19 @@ export function ProfileContent({
                   </Text>
                 </Pressable>
               </View>
+              {deleteRetryable ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="retry-delete-account"
+                  disabled={deleting}
+                  onPress={onRetryDelete}
+                  style={styles.secondaryButton}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    {deleting ? 'RETRYING…' : 'RETRY DELETE'}
+                  </Text>
+                </Pressable>
+              ) : null}
             </>
           ) : (
             <Pressable
@@ -253,10 +419,11 @@ export default function ProfileScreen() {
   const [signOutConfirming, setSignOutConfirming] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
-  const [deleteConfirming, setDeleteConfirming] = useState(false);
-  const [deleteTypedConfirm, setDeleteTypedConfirm] = useState('');
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deletion = useAccountDeletion({
+    deleteAccount: () => api.deleteAccount(),
+    signOut: () => auth.signOut(),
+    clearQueries: () => queryClient.clear(),
+  });
   const queryScope = protectedQueryScope(auth.status, auth.user?.id);
   const meKey = accountQueryKey(queryScope ?? 'inactive', 'me');
   const me = useQuery({
@@ -305,23 +472,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const deleteAccount = async () => {
-    setDeleteError(null);
-    setDeleting(true);
-    try {
-      await api.deleteAccount();
-      // The account is gone server-side; finalize the local session.
-      await auth.signOut();
-      queryClient.clear();
-    } catch (reason) {
-      setDeleteError(errorMessage(reason));
-    } finally {
-      setDeleting(false);
-      setDeleteConfirming(false);
-      setDeleteTypedConfirm('');
-    }
-  };
-
   const accessEnabled = auth.status === 'fixture' || auth.status === 'authenticated';
   const modeLabel =
     auth.status === 'fixture'
@@ -351,17 +501,16 @@ export default function ProfileScreen() {
           onCancelSignOut={() => setSignOutConfirming(false)}
           onConfirmSignOut={() => void signOut()}
           canDeleteAccount={auth.status === 'authenticated'}
-          deleteConfirming={deleteConfirming}
-          deleteTypedConfirm={deleteTypedConfirm}
-          onDeleteTypedConfirmChange={setDeleteTypedConfirm}
-          deleting={deleting}
-          deleteError={deleteError}
-          onRequestDelete={() => setDeleteConfirming(true)}
-          onCancelDelete={() => {
-            setDeleteConfirming(false);
-            setDeleteTypedConfirm('');
-          }}
-          onConfirmDelete={() => void deleteAccount()}
+          deleteConfirming={deletion.confirming}
+          deleteTypedConfirm={deletion.typedConfirm}
+          onDeleteTypedConfirmChange={deletion.setTypedConfirm}
+          deleting={deletion.deleting}
+          deleteError={deletion.error}
+          deleteRetryable={deletion.retryable}
+          onRequestDelete={deletion.request}
+          onCancelDelete={deletion.cancel}
+          onConfirmDelete={deletion.confirm}
+          onRetryDelete={deletion.retry}
         />
       ) : null}
 

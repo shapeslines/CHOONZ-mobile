@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { decodeMySkins, decodeSkinCatalog, decodeSkin, decodeSkinSummary } from '../src/lib/decoder';
+import {
+  decodeApiErrorDetail,
+  decodeMySkins,
+  decodeSkinCatalog,
+  decodeSkin,
+  decodeSkinGrant,
+  decodeSkinSummary,
+  decodeSkinUnlockCondition,
+  decodeSkinUnlockReceipt,
+} from '../src/lib/decoder';
 import { fixtureMySkins, fixtureSkinCatalog } from '../src/lib/fixtures';
 import type { SkinSummary } from '../src/lib/types';
 import {
@@ -18,8 +27,8 @@ describe('skin catalog decoder', () => {
   it('decodes the fixture catalog shape strictly', () => {
     const decoded = decodeSkinCatalog(fixtureSkinCatalog);
     expect(decoded.schema_version).toBe('1.0');
-    expect(decoded.count).toBe(12);
-    expect(decoded.skins).toHaveLength(12);
+    expect(decoded.count).toBe(13);
+    expect(decoded.skins).toHaveLength(13);
     const sodium = decoded.skins.find((skin) => skin.id === 'gel:sodium');
     expect(sodium?.default).toBe(true);
     expect(sodium?.entitlement).toBe('free');
@@ -145,8 +154,45 @@ describe('skin loadout (M-S2)', () => {
   });
 
   it('groups skins by kind', () => {
-    expect(skinsByKind(fixtureSkinCatalog, 'ui_theme')).toHaveLength(5);
+    expect(skinsByKind(fixtureSkinCatalog, 'ui_theme')).toHaveLength(6);
     expect(skinsByKind(fixtureSkinCatalog, 'character')).toHaveLength(5);
     expect(skinsByKind(fixtureSkinCatalog, 'scene_vibe')).toHaveLength(2);
+  });
+});
+
+describe('skin unlock decoders (M-S3)', () => {
+  const receipt = {
+    skin_id: 'gel:sodium-ember',
+    source: 'earnable',
+    granted_at: '2026-09-03T00:00:00Z',
+    condition: { id: 'complete_n_matches', required: 5, observed: 5 },
+  };
+
+  it('decodes an unlock receipt strictly', () => {
+    const decoded = decodeSkinUnlockReceipt(receipt);
+    expect(decoded.source).toBe('earnable');
+    expect(decoded.condition).toEqual({ id: 'complete_n_matches', required: 5, observed: 5 });
+  });
+
+  it('rejects a receipt whose source is not earnable or whose condition is malformed', () => {
+    expect(() => decodeSkinUnlockReceipt({ ...receipt, source: 'free' })).toThrow();
+    expect(() =>
+      decodeSkinUnlockReceipt({ ...receipt, condition: { id: 'x', required: 5, observed: 2.5 } }),
+    ).toThrow();
+    expect(() => decodeSkinUnlockCondition({ id: 'x', required: -1, observed: 0 })).toThrow();
+  });
+
+  it('decodeSkinGrant rejects unknown sources', () => {
+    expect(() => decodeSkinGrant({ skin_id: 'a', source: 'gift', granted_at: 'now' })).toThrow();
+  });
+
+  it('decodeApiErrorDetail accepts string and object detail and rejects the rest', () => {
+    expect(decodeApiErrorDetail({ detail: 'nope' })).toEqual({ code: 'unknown', message: 'nope', extra: {} });
+    expect(
+      decodeApiErrorDetail({ detail: { code: 'x', message: 'm', receipt: { r: 1 } }, error_id: 'abc' }),
+    ).toEqual({ code: 'x', message: 'm', extra: { receipt: { r: 1 } } });
+    expect(decodeApiErrorDetail({ detail: { message: 'no code' } })).toBeUndefined();
+    expect(decodeApiErrorDetail('garbage')).toBeUndefined();
+    expect(decodeApiErrorDetail(null)).toBeUndefined();
   });
 });

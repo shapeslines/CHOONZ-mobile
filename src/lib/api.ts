@@ -13,14 +13,18 @@ import {
   decodeMechanicsReplayReceipt,
   decodeMechanicsScenarioDetail,
   decodeMechanicsScenarioList,
+  decodeApiErrorDetail,
   decodeMySkins,
+  decodeSeries,
+  decodeSkinUnlockCondition,
+  decodeSkinUnlockReceipt,
   decodeSkinCatalog,
   decodeStages,
   decodeToon,
   decodeToons,
   decodeUser,
 } from '@/lib/decoder';
-import { ChoonzClientError, ResponseDecodeError } from '@/lib/errors';
+import { ChoonzClientError, ResponseDecodeError, type ApiErrorDetail } from '@/lib/errors';
 import { FixtureMatchService } from '@/lib/fixture-match-service';
 import {
   fixtureCatalog,
@@ -29,8 +33,10 @@ import {
   fixtureGels,
   fixtureHealth,
   fixtureKits,
+  fixtureEarnableSkinId,
   fixtureMySkins,
   fixtureSkinCatalog,
+  fixtureUnlockRequired,
   fixtureStages,
   fixtureUser,
 } from '@/lib/fixtures';
@@ -53,13 +59,18 @@ import type {
   MatchCreateInput,
   MatchState,
   MatchTickInput,
+  MechanicsEngineRevision,
   MechanicsReplayOverrides,
   MechanicsReplayReceipt,
   MechanicsScenarioDetail,
   MechanicsScenarioList,
   MySkins,
+  Series,
+  SeriesCreateInput,
   SkinCatalog,
   SkinSelectionUpdateInput,
+  SkinUnlockOutcome,
+  SkinUnlockReceipt,
   Stage,
   Toon,
   ToonCreateInput,
@@ -69,6 +80,15 @@ import type {
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 type Decoder<T> = (value: unknown) => T;
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
+
+/**
+ * Append an explicit `engine_revision` pin to a mechanics path. An absent pin
+ * appends nothing at all, so the request is byte-identical to the pre-selector
+ * one and the server's own default decides the corpus.
+ */
+function pinRevision(path: string, engineRevision?: MechanicsEngineRevision): string {
+  return engineRevision ? `${path}?engine_revision=${engineRevision}` : path;
+}
 
 const fixtureAccountConnections: ChoonzConnection[] = [
   {
@@ -94,12 +114,14 @@ export interface ChoonzApi {
   getSkins(): Promise<SkinCatalog>;
   getMySkins(): Promise<MySkins>;
   updateMySkins(input: SkinSelectionUpdateInput): Promise<MySkins>;
+  unlockSkin(skinId: string): Promise<SkinUnlockOutcome>;
   deleteAccount(): Promise<void>;
   getToons(): Promise<Toon[]>;
   createToon(input: ToonCreateInput): Promise<Toon>;
   getLoadouts(): Promise<Loadout[]>;
   createLoadout(input: LoadoutCreateInput): Promise<Loadout>;
   createMatch(input: MatchCreateInput): Promise<Match>;
+  createSeries(input: SeriesCreateInput): Promise<Series>;
   getMatch(matchId: number): Promise<Match>;
   startMatch(matchId: number): Promise<Match>;
   pauseMatch(matchId: number): Promise<Match>;
@@ -110,11 +132,17 @@ export interface ChoonzApi {
   actMatch(matchId: number, input: MatchActInput): Promise<MatchState>;
   getMatchState(matchId: number): Promise<MatchState>;
   rematch(matchId: number): Promise<Match>;
-  getMechanicsScenarios(): Promise<MechanicsScenarioList>;
-  getMechanicsScenario(scenarioId: string): Promise<MechanicsScenarioDetail>;
+  getMechanicsScenarios(
+    engineRevision?: MechanicsEngineRevision,
+  ): Promise<MechanicsScenarioList>;
+  getMechanicsScenario(
+    scenarioId: string,
+    engineRevision?: MechanicsEngineRevision,
+  ): Promise<MechanicsScenarioDetail>;
   replayMechanics(
     scenarioId: string,
     overrides?: MechanicsReplayOverrides,
+    engineRevision?: MechanicsEngineRevision,
   ): Promise<MechanicsReplayReceipt>;
 }
 
@@ -133,6 +161,10 @@ export class ChoonzApiClient implements ChoonzApi {
   private readonly fetcher: FetchLike;
   private readonly fixtures = new FixtureMatchService();
   private readonly fixtureProfile: ChoonzUser = { ...fixtureUser };
+  private readonly fixtureLoadout: MySkins = {
+    owned: fixtureMySkins.owned.map((grant) => ({ ...grant })),
+    selection: { ...fixtureMySkins.selection },
+  };
   private readonly fixtureConnections = fixtureAccountConnections.map((connection) => ({
     ...connection,
     scopes: [...connection.scopes],
@@ -230,7 +262,7 @@ export class ChoonzApiClient implements ChoonzApi {
     return this.fromMode(
       '/me/skins',
       decodeMySkins,
-      () => Promise.resolve({ ...fixtureMySkins }),
+      () => Promise.resolve(this.snapshotFixtureLoadout()),
       true,
     );
   }
@@ -241,14 +273,75 @@ export class ChoonzApiClient implements ChoonzApi {
       decodeMySkins,
       () => {
         // Fixture mode applies the selection locally and returns the fixture loadout.
-        const next = { ...fixtureMySkins.selection } as Record<SkinKind, string>;
+        const next = { ...this.fixtureLoadout.selection } as Record<SkinKind, string>;
         next[input.kind] = input.skin_id;
-        return Promise.resolve({ owned: [], selection: next });
+        this.fixtureLoadout.selection = next as MySkins['selection'];
+        return Promise.resolve(this.snapshotFixtureLoadout());
       },
       true,
       'PATCH',
       input,
     );
+  }
+
+  async unlockSkin(skinId: string): Promise<SkinUnlockOutcome> {
+    try {
+      const receipt = await this.fromMode(
+        `/me/skins/${encodeURIComponent(skinId)}/unlock`,
+        decodeSkinUnlockReceipt,
+        () => this.fixtureUnlock(skinId),
+        true,
+        'POST',
+      );
+      return { status: 'granted', receipt };
+    } catch (error) {
+      if (error instanceof ChoonzClientError && error.status === 403 && error.detail) {
+        if (error.detail.code === 'condition_not_met') {
+          return {
+            status: 'condition_not_met',
+            condition: decodeSkinUnlockCondition(error.detail.extra.condition),
+          };
+        }
+        if (error.detail.code === 'revoked') {
+          return { status: 'revoked', message: error.detail.message || 'This skin was revoked.' };
+        }
+      }
+      throw error;
+    }
+  }
+
+  private snapshotFixtureLoadout(): MySkins {
+    return {
+      owned: this.fixtureLoadout.owned.map((grant) => ({ ...grant })),
+      selection: { ...this.fixtureLoadout.selection },
+    };
+  }
+
+  /** Fixture unlock mirrors the backend: server-side count, fail-closed, idempotent. */
+  private async fixtureUnlock(skinId: string): Promise<SkinUnlockReceipt> {
+    const skin = fixtureSkinCatalog.skins.find((entry) => entry.id === skinId);
+    if (!skin) {
+      throw new ChoonzClientError('response', 'CHOONZ API returned 404.', 404);
+    }
+    if (skin.entitlement !== 'earnable' || skinId !== fixtureEarnableSkinId) {
+      throw new ChoonzClientError('response', 'CHOONZ API returned 422.', 422);
+    }
+    const observed = this.fixtures.completedMatchCount();
+    const condition = { id: 'complete_n_matches', required: fixtureUnlockRequired, observed };
+    const existing = this.fixtureLoadout.owned.find((grant) => grant.skin_id === skinId);
+    if (existing) {
+      return { ...existing, source: 'earnable', condition };
+    }
+    if (observed < fixtureUnlockRequired) {
+      throw new ChoonzClientError('response', 'CHOONZ API returned 403.', 403, {
+        code: 'condition_not_met',
+        message: 'Complete more matches to unlock this skin.',
+        extra: { condition },
+      });
+    }
+    const grant = { skin_id: skinId, source: 'earnable' as const, granted_at: new Date().toISOString() };
+    this.fixtureLoadout.owned.push(grant);
+    return { ...grant, condition };
   }
 
   deleteAccount(): Promise<void> {
@@ -295,6 +388,10 @@ export class ChoonzApiClient implements ChoonzApi {
 
   createMatch(input: MatchCreateInput): Promise<Match> {
     return this.fromFightMode('/matches', decodeMatch, () => this.fixtures.createMatch(input), 'POST', input);
+  }
+
+  createSeries(input: SeriesCreateInput): Promise<Series> {
+    return this.fromFightMode('/series', decodeSeries, () => this.fixtures.createSeries(input), 'POST', input);
   }
 
   getMatch(matchId: number): Promise<Match> {
@@ -384,15 +481,23 @@ export class ChoonzApiClient implements ChoonzApi {
     );
   }
 
-  getMechanicsScenarios(): Promise<MechanicsScenarioList> {
-    this.requireMechanicsEligibility();
-    return this.fromMechanicsMode('/mechanics/scenarios', decodeMechanicsScenarioList);
-  }
-
-  getMechanicsScenario(scenarioId: string): Promise<MechanicsScenarioDetail> {
+  getMechanicsScenarios(
+    engineRevision?: MechanicsEngineRevision,
+  ): Promise<MechanicsScenarioList> {
     this.requireMechanicsEligibility();
     return this.fromMechanicsMode(
-      `/mechanics/scenarios/${encodeURIComponent(scenarioId)}`,
+      pinRevision('/mechanics/scenarios', engineRevision),
+      decodeMechanicsScenarioList,
+    );
+  }
+
+  getMechanicsScenario(
+    scenarioId: string,
+    engineRevision?: MechanicsEngineRevision,
+  ): Promise<MechanicsScenarioDetail> {
+    this.requireMechanicsEligibility();
+    return this.fromMechanicsMode(
+      pinRevision(`/mechanics/scenarios/${encodeURIComponent(scenarioId)}`, engineRevision),
       decodeMechanicsScenarioDetail,
     );
   }
@@ -400,13 +505,21 @@ export class ChoonzApiClient implements ChoonzApi {
   replayMechanics(
     scenarioId: string,
     overrides?: MechanicsReplayOverrides,
+    engineRevision?: MechanicsEngineRevision,
   ): Promise<MechanicsReplayReceipt> {
     this.requireMechanicsEligibility();
-    const body: { scenario_id: string; overrides?: MechanicsReplayOverrides } = {
+    const body: {
+      scenario_id: string;
+      overrides?: MechanicsReplayOverrides;
+      engine_revision?: MechanicsEngineRevision;
+    } = {
       scenario_id: scenarioId,
     };
     if (overrides) {
       body.overrides = overrides;
+    }
+    if (engineRevision) {
+      body.engine_revision = engineRevision;
     }
     return this.fromMechanicsMode('/mechanics/replay', decodeMechanicsReplayReceipt, 'POST', body);
   }
@@ -529,10 +642,17 @@ export class ChoonzApiClient implements ChoonzApi {
     }
 
     if (!response.ok) {
+      let detail: ApiErrorDetail | undefined;
+      try {
+        detail = decodeApiErrorDetail(await response.json());
+      } catch {
+        detail = undefined; // empty or non-JSON error bodies keep the generic failure
+      }
       throw new ChoonzClientError(
         'response',
         `CHOONZ API returned ${response.status}.`,
         response.status,
+        detail,
       );
     }
 

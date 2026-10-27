@@ -1,4 +1,6 @@
-﻿# CHOONZ-mobile
+> **FLEET STATUS · ALIVE** (2026-08-17) — fighting-game mobile client (Expo) — PUBLIC. Authority: [FLEET-MAP](https://github.com/shapeslines/GromCodebase/blob/main/docs/fleet/FLEET-MAP.md) · decision: vault 2026-08-17 provenance ratification.
+
+# CHOONZ-mobile
 
 [![CI](https://github.com/shapeslines/CHOONZ-mobile/actions/workflows/ci.yml/badge.svg)](https://github.com/shapeslines/CHOONZ-mobile/actions/workflows/ci.yml)
 
@@ -7,18 +9,20 @@ Router slice includes service status, Supabase email/password sign-in, profile,
 the static roster catalog, and one constrained P1 practice-match loop. It
 consumes the **CHOONZ headless backend** over its bearer-token API.
 
-> **Status:** Expo SDK 56 review candidate. The Fight route supports the frozen
+> **Status:** Expo SDK 57 review candidate. The Fight route supports the frozen
 > P1 Toon/loadout and match lifecycle controls; P2 adds bounded profile and
 > connection management; and P3 adds only the gated developer mechanics lab.
 > OAuth/deep-link provider flows, EAS linking, store submission, bots, training,
 > tutorials, and production web deployment remain excluded.
+
+> **Start here (agents):** [`AGENTS.md`](AGENTS.md) (boundaries, objects map, session protocol) → [`docs/README.md`](docs/README.md) (which file answers which question) → [`docs/next-session.md`](docs/next-session.md) (FIRST action) → [`docs/groundwork.md`](docs/groundwork.md) → claim a row of [`docs/WORK-FRONTLOG.md`](docs/WORK-FRONTLOG.md) and its plan in [`docs/plans/`](docs/plans/README.md). Backend contract: CHOONZ `docs/mobile-integration.md`.
 
 ## Stack
 
 | Concern        | Choice                                              |
 | -------------- | --------------------------------------------------- |
 | Language       | TypeScript 6.x                                      |
-| Runtime        | Expo SDK 56 / React Native 0.85 / React 19          |
+| Runtime        | Expo SDK 57 / React Native 0.86 / React 19          |
 | Navigation     | Expo Router file routes in `src/app`                |
 | Auth           | Supabase Auth, SecureStore-backed PKCE sessions     |
 | Data           | CHOONZ bearer-token API + TanStack Query cache      |
@@ -138,7 +142,7 @@ Current npm audit findings are treated as a review-only build-chain risk. The
 time-bounded record covers the existing Metro/image-size and Expo
 config-plugin/uuid advisories plus the dev-test RNTL-to-React-Native aggregate.
 CI must not accept untrusted binary assets until compatible upstream fixes land.
-Keep the SDK 56 dependency set; do not force a downgrade merely to silence the
+Keep the SDK 57 dependency set; do not force a downgrade merely to silence the
 audit. The exact advisory paths, compensating controls, owner, and expiry are
 recorded in [`docs/security/npm-audit-exception.md`](docs/security/npm-audit-exception.md).
 
@@ -164,3 +168,5 @@ suite, and every command above on every push and PR.
 - Sibling patterns: `shapeslines/Clubheavy-Mobile`, `shapeslines/Shapeslines-Mobile`
 - Colony lane 02 source material: `C:\Users\Carson\Desktop\grokprod2\ingress\02-choonz-fighting-game\`
 - Architecture deep-dive: `../System-Architecture/projects/tinytoonz-headless.md` (legacy path; will retitle when CHOONZ rename propagates)
+
+Discovery map: [FLEET-INDEX.md](https://github.com/shapeslines/GromCodebase/blob/main/docs/fleet/FLEET-INDEX.md) (question → surface → one move). Do not fork GAP-REGISTER or FLEET-INDEX in this repo.
