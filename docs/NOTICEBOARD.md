@@ -56,5 +56,5 @@ related:
 
 ## Changelog
 
-- 2026-10-27 — refresh current-state pointers to main @ `f565fbf` (CI-fill pass; no lockfile change).
+- 2026-10-27 — refresh current-state pointers to main @ `f565fbf`.
 - 2026-09-07 — board seeded (estate repo-board rollout, EstateBoard tracker).
